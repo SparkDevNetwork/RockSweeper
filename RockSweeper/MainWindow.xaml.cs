@@ -89,6 +89,17 @@ namespace RockSweeper
             }
         }
 
+        public string StatusBarText
+        {
+            get => _statusBarText;
+            set
+            {
+                _statusBarText = value;
+                NotifyPropertyChanged( "StatusBarText" );
+            }
+        }
+        private string _statusBarText;
+
         /// <summary>
         /// Gets or sets the progress lines.
         /// </summary>
@@ -152,19 +163,19 @@ namespace RockSweeper
         protected void ThreadSweep()
         {
             var cancellationTokenSource = new CancellationTokenSource();
+            SweeperOption option = null;
+            ProgressLine progressLine = null;
+
+            Sweeper.ProgressCallback = delegate ( string text )
+            {
+                StatusBarText = $"{ option.Title } { text }";
+            };
+            Sweeper.CancellationToken = cancellationTokenSource.Token;
 
             for ( int i = 0; i < EnabledOptions.Count; i++ )
             {
-                var option = EnabledOptions[i];
-                var progressLine = ProgressLines[i];
-                var actionData = new SweeperActionData
-                {
-                    ProgressCallback = delegate ( double progress )
-                    {
-                        progressLine.Progress = progress * 100;
-                    },
-                    CancellationToken = cancellationTokenSource.Token
-                };
+                option = EnabledOptions[i];
+                progressLine = ProgressLines[i];
 
                 try
                 {
@@ -172,6 +183,7 @@ namespace RockSweeper
                     {
                         progressLine.State = ProgressLineState.Processing;
                         dgProgress.ScrollIntoView( progressLine );
+                        StatusBarText = option.Title;
                     } );
 
                     var methodInfo = Sweeper.GetType().GetMethod( option.MethodName );
@@ -181,7 +193,7 @@ namespace RockSweeper
                         throw new Exception( $"Unknown sweeper method named '{ option.MethodName }'" );
                     }
 
-                    methodInfo.Invoke( Sweeper, new object[] { actionData } );
+                    methodInfo.Invoke( Sweeper, new object[] { } );
 
                     Dispatcher.Invoke( () =>
                     {
@@ -200,6 +212,8 @@ namespace RockSweeper
                     return;
                 }
             }
+
+            StatusBarText = string.Empty;
 
             Dispatcher.Invoke( () =>
             {

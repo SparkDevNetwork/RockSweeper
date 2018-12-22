@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace RockSweeper
@@ -12,6 +13,10 @@ namespace RockSweeper
     public class SweeperController
     {
         #region Properties
+
+        public Action<string> ProgressCallback { get; set; }
+
+        public CancellationToken? CancellationToken { get; set; }
 
         /// <summary>
         /// Gets or sets the database connection.
@@ -53,6 +58,8 @@ namespace RockSweeper
         /// </value>
         protected string GetFileUrl { get; private set; }
 
+        protected Dictionary<string, string> EmailMap { get; private set; }
+
         #endregion
 
         #region Constructor
@@ -74,6 +81,34 @@ namespace RockSweeper
             var internalApplicationRoot = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'InternalApplicationRoot' AND [EntityTypeId] IS NULL" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
             GetFileUrl = "http://localhost:64706/GetFile.ashx";
+
+            EmailMap = new Dictionary<string, string>();
+        }
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Progresses the specified percentage.
+        /// </summary>
+        /// <param name="percentage">The percentage value, from 0.0 to 1.0.</param>
+        /// <param name="step">The step.</param>
+        /// <param name="stepCount">The step count.</param>
+        public void Progress( double percentage, int? step = null, int? stepCount = null )
+        {
+            if ( step.HasValue && stepCount.HasValue )
+            {
+                ProgressCallback?.Invoke( string.Format( "{0:0.00}% (Step {1} of {2})", percentage * 100, step, stepCount ) );
+            }
+            else if ( step.HasValue )
+            {
+                ProgressCallback?.Invoke( string.Format( "{0:0.00}% (Step {1})", percentage * 100, step ) );
+            }
+            else
+            {
+                ProgressCallback?.Invoke( string.Format( "{0:0.00}%", percentage * 100 ) );
+            }
         }
 
         #endregion
@@ -103,7 +138,7 @@ namespace RockSweeper
         /// <typeparam name="T">The type of the return values.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        protected List<T> SqlScalarList<T>( string sql )
+        protected List<T> SqlQuery<T>( string sql )
         {
             var list = new List<T>();
 
@@ -263,6 +298,39 @@ namespace RockSweeper
         }
 
         /// <summary>
+        /// Execute a SQL query that returns multiple rows.
+        /// </summary>
+        /// <param name="sql">The SQL statement.</param>
+        /// <returns></returns>
+        protected List<Dictionary<string, object>> SqlQuery( string sql )
+        {
+            var list = new List<Dictionary<string, object>>();
+
+            using ( var command = Connection.CreateCommand() )
+            {
+                command.Transaction = Transaction;
+                command.CommandText = sql;
+
+                using ( var reader = command.ExecuteReader() )
+                {
+                    while ( reader.Read() )
+                    {
+                        var dictionary = new Dictionary<string, object>();
+
+                        for (int i = 0; i < reader.FieldCount; i++ )
+                        {
+                            dictionary.Add( reader.GetName( i ), reader.IsDBNull( i ) ? null : reader[i] );
+                        }
+
+                        list.Add( dictionary );
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        /// <summary>
         /// Executes a non-query SQL command.
         /// </summary>
         /// <param name="sql">The SQL statement.</param>
@@ -307,7 +375,17 @@ namespace RockSweeper
         /// <returns></returns>
         protected int? GetEntityTypeId( string entityType )
         {
-            return SqlScalar<int?>( $"SELECT [Id] FROM [EntityType] WHERE [Name] = '{ entityType.Replace( "'", "''" ) }'" );
+            return SqlScalar<int?>( $"SELECT [Id] FROM [EntityType] WHERE [Name] = '{ entityType }'" );
+        }
+
+        /// <summary>
+        /// Gets the field type identifier.
+        /// </summary>
+        /// <param name="fieldType">Type of the field.</param>
+        /// <returns></returns>
+        protected int? GetFieldTypeId( string fieldType )
+        {
+            return SqlScalar<int?>( $"SELECT [Id] FROM [FieldType] WHERE [Class] = '{ fieldType }'" );
         }
 
         /// <summary>
@@ -469,6 +547,90 @@ ELSE
                 filename.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase );
         }
 
+        /// <summary>
+        /// Generates the fake email address for address.
+        /// </summary>
+        /// <param name="originalEmail">The original email.</param>
+        /// <returns></returns>
+        protected string GenerateFakeEmailAddressForAddress( string originalEmail )
+        {
+            if ( EmailMap.ContainsKey( originalEmail.ToLower() ) )
+            {
+                return EmailMap[originalEmail.ToLower()];
+            }
+
+            string email;
+
+            if ( originalEmail.Contains( "@" ) )
+            {
+                email = $"user{ EmailMap.Count + 1 }@fakeinbox.com";
+            }
+            else
+            {
+                email = $"user{ EmailMap.Count + 1 }";
+            }
+
+            EmailMap.Add( originalEmail.ToLower(), email );
+
+            return email;
+        }
+
+        /// <summary>
+        /// Scrubs the specified table column with the given replacement data.
+        /// </summary>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="columnName">Name of the column.</param>
+        /// <param name="replacement">The replacement function to provide the new value.</param>
+        /// <param name="step">The step number.</param>
+        /// <param name="stepCount">The step count.</param>
+        protected void ScrubTableTextColumn( string tableName, string columnName, Func<string, string> replacement, int? step, int? stepCount )
+        {
+            ScrubTableTextColumns( tableName, new[] { columnName }, replacement, step, stepCount );
+        }
+
+        /// <summary>
+        /// Scrubs the specified table columns with the given replacement data.
+        /// </summary>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="columnName">Name of the column.</param>
+        /// <param name="replacement">The replacement function to provide the new value.</param>
+        /// <param name="step">The step number.</param>
+        /// <param name="stepCount">The step count.</param>
+        protected void ScrubTableTextColumns( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, int? step, int? stepCount )
+        {
+            string columns = string.Join( "], [", columnNames );
+            var rows = SqlQuery( $"SELECT [Id], [{ string.Join( "], [", columnNames ) }] FROM [{ tableName }]" );
+
+            for ( int i = 0; i < rows.Count; i++ )
+            {
+                int valueId = (int)rows[i]["Id"];
+                var updatedValues = new Dictionary<string, object>();
+
+                foreach ( var c in columnNames )
+                {
+                    var value = (string)rows[i][c];
+
+                    if ( !string.IsNullOrWhiteSpace( value ) )
+                    {
+                        var newValue = replacement( value );
+
+                        if ( value != newValue )
+                        {
+                            updatedValues.Add( c, newValue );
+                        }
+                    }
+                }
+
+                if ( updatedValues.Any() )
+                {
+                    var updateStrings = updatedValues.Keys.Select( k => $"[{ k }] = @{ k }" );
+                    SqlCommand( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { valueId }", updatedValues );
+                }
+
+                Progress( i / (double)rows.Count, step, stepCount );
+            }
+        }
+
         #endregion
 
         #region System Settings
@@ -477,7 +639,7 @@ ELSE
         /// Sanitizes the application roots.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void SanitizeApplicationRoots( SweeperActionData actionData )
+        public void SanitizeApplicationRoots()
         {
             SetGlobalAttributeValue( "InternalApplicationRoot", "rock.example.org" );
             SetGlobalAttributeValue( "PublicApplicationRoot", "www.example.org" );
@@ -487,7 +649,7 @@ ELSE
         /// Disables the communication transports.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableCommunicationTransports( SweeperActionData actionData )
+        public void DisableCommunicationTransports()
         {
             DisableComponentsOfType( "Rock.Communication.TransportComponent" );
         }
@@ -496,7 +658,7 @@ ELSE
         /// Resets the existing communication transport configuration attribute values.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetCommunicationTransports( SweeperActionData actionData )
+        public void ResetCommunicationTransports()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Communication.TransportComponent" );
         }
@@ -505,7 +667,7 @@ ELSE
         /// Configures Rock to use localhost SMTP email delivery.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ConfigureForLocalhostSmtp( SweeperActionData actionData )
+        public void ConfigureForLocalhostSmtp()
         {
             //
             // Setup the Email medium.
@@ -528,7 +690,7 @@ ELSE
         /// Disables the financial gateways.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableFinancialGateways( SweeperActionData actionData )
+        public void DisableFinancialGateways()
         {
             SqlCommand( $@"UPDATE FG
 SET FG.[IsActive] = 0
@@ -541,7 +703,7 @@ WHERE ET.[Name] != 'Rock.Financial.TestGateway'" );
         /// Resets the financial gateway configuration attributes.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetFinancialGateways( SweeperActionData actionData )
+        public void ResetFinancialGateways()
         {
             int? entityTypeId = GetEntityTypeId( "Rock.Model.FinancialGateway" );
 
@@ -557,7 +719,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the external authentication services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableExternalAuthenticationServices( SweeperActionData actionData )
+        public void DisableExternalAuthenticationServices()
         {
             DisableComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
@@ -569,7 +731,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the external authentication services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetExternalAuthenticationServices( SweeperActionData actionData )
+        public void ResetExternalAuthenticationServices()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
@@ -581,7 +743,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the authentication services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableAuthenticationServices( SweeperActionData actionData )
+        public void DisableAuthenticationServices()
         {
             DisableComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
@@ -592,7 +754,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the authentication services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetAuthenticationServices( SweeperActionData actionData )
+        public void ResetAuthenticationServices()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
@@ -603,7 +765,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the location services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableLocationServices( SweeperActionData actionData )
+        public void DisableLocationServices()
         {
             DisableComponentsOfType( "Rock.Address.VerificationComponent" );
         }
@@ -612,7 +774,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the location services.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetLocationServices( SweeperActionData actionData )
+        public void ResetLocationServices()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Address.VerificationComponent" );
         }
@@ -621,7 +783,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the external storage providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableExternalStorageProviders( SweeperActionData actionData )
+        public void DisableExternalStorageProviders()
         {
             DisableComponentsOfType( "Rock.Storage.ProviderComponent", new[]
             {
@@ -634,7 +796,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the external storage providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetExternalStorageProviders( SweeperActionData actionData )
+        public void ResetExternalStorageProviders()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Storage.ProviderComponent", new[]
             {
@@ -647,7 +809,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the background check providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableBackgroundCheckProviders( SweeperActionData actionData )
+        public void DisableBackgroundCheckProviders()
         {
             DisableComponentsOfType( "Rock.Security.BackgroundCheckComponent" );
         }
@@ -656,7 +818,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the background check providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetBackgroundCheckProviders( SweeperActionData actionData )
+        public void ResetBackgroundCheckProviders()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Security.BackgroundCheckComponent" );
         }
@@ -665,7 +827,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the signature document providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableSignatureDocumentProviders( SweeperActionData actionData )
+        public void DisableSignatureDocumentProviders()
         {
             DisableComponentsOfType( "Rock.Security.DigitalSignatureComponent" );
         }
@@ -674,16 +836,17 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the signature document providers.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetSignatureDocumentProviders( SweeperActionData actionData )
+        public void ResetSignatureDocumentProviders()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Security.DigitalSignatureComponent" );
+            SetGlobalAttributeValue( "SignNowAccessToken", string.Empty );
         }
 
         /// <summary>
         /// Disables the phone systems.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisablePhoneSystems( SweeperActionData actionData )
+        public void DisablePhoneSystems()
         {
             DisableComponentsOfType( "Rock.Pbx.PbxComponent" );
         }
@@ -692,9 +855,18 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Resets the phone systems.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ResetPhoneSystems( SweeperActionData actionData )
+        public void ResetPhoneSystems()
         {
             DeleteAttributeValuesForComponentsOfType( "Rock.Pbx.PbxComponent" );
+        }
+
+        /// <summary>
+        /// Resets the google API keys.
+        /// </summary>
+        public void ResetGoogleApiKeys()
+        {
+            SetGlobalAttributeValue( "GoogleAPIKey", string.Empty );
+            SetGlobalAttributeValue( "core_GoogleReCaptchaSiteKey", string.Empty );
         }
 
         #endregion
@@ -705,7 +877,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Disables the rock jobs except the Job Pulse job.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void DisableRockJobs( SweeperActionData actionData )
+        public void DisableRockJobs()
         {
             SqlCommand( $"UPDATE [ServiceJob] SET [IsActive] = 0 WHERE [Guid] != 'CB24FF2A-5AD3-4976-883F-DAF4EFC1D7C7'" );
         }
@@ -718,7 +890,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Moves all the binary files into database.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void MoveBinaryFilesIntoDatabase( SweeperActionData actionData )
+        public void MoveBinaryFilesIntoDatabase()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
 
@@ -731,9 +903,9 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
                 Guid fileGuid = files[i].Item2;
                 string fileName = files[i].Item3;
 
-                actionData.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
-                actionData.ProgressCallback?.Invoke( i / fileCount );
+                Progress( i / fileCount );
 
                 using ( var ms = GetFileDataFromRock( fileGuid ) )
                 {
@@ -758,7 +930,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Replaces the database images with correctly sized placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ReplaceDatabaseImagesWithSizedPlaceholders( SweeperActionData actionData )
+        public void ReplaceDatabaseImagesWithSizedPlaceholders()
         {
             var tasks = new List<Thread>();
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -889,7 +1061,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
             foreach ( var file in files )
             {
-                actionData.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -897,7 +1069,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
                 if ( completedCount % 10 == 0 )
                 {
-                    actionData.ProgressCallback?.Invoke( completedCount / fileCount );
+                    Progress( completedCount / fileCount );
                 }
             }
         }
@@ -906,7 +1078,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Replaces the database images with empty placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ReplaceDatabaseImagesWithEmptyPlaceholders( SweeperActionData actionData )
+        public void ReplaceDatabaseImagesWithEmptyPlaceholders()
         {
             var tasks = new List<Thread>();
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -1002,7 +1174,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
             foreach ( var file in files )
             {
-                actionData.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -1010,7 +1182,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
                 if ( completedCount % 10 == 0 )
                 {
-                    actionData.ProgressCallback?.Invoke( completedCount / fileCount );
+                    Progress( completedCount / fileCount );
                 }
             }
         }
@@ -1019,7 +1191,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Replaces the database documents with sized placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ReplaceDatabaseDocumentsWithSizedPlaceholders( SweeperActionData actionData )
+        public void ReplaceDatabaseDocumentsWithSizedPlaceholders()
         {
             var tasks = new List<Thread>();
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -1098,7 +1270,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
             foreach ( var file in files )
             {
-                actionData.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -1106,7 +1278,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
                 if ( completedCount % 10 == 0 )
                 {
-                    actionData.ProgressCallback?.Invoke( completedCount / fileCount );
+                    Progress( completedCount / fileCount );
                 }
             }
         }
@@ -1115,7 +1287,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
         /// Replaces the database documents with empty placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
-        public void ReplaceDatabaseDocumentsWithEmptyPlaceholders( SweeperActionData actionData )
+        public void ReplaceDatabaseDocumentsWithEmptyPlaceholders()
         {
             var tasks = new List<Thread>();
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -1164,7 +1336,7 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
             foreach ( var file in files )
             {
-                actionData.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -1172,18 +1344,127 @@ WHERE A.[EntityTypeId] = { entityTypeId.Value } AND ET.[Name] != 'Rock.Financial
 
                 if ( completedCount % 10 == 0 )
                 {
-                    actionData.ProgressCallback?.Invoke( completedCount / fileCount );
+                    Progress( completedCount / fileCount );
                 }
             }
         }
 
         #endregion
-    }
 
-    public class SweeperActionData
-    {
-        public Action<double> ProgressCallback { get; set; }
+        #region General
 
-        public CancellationToken? CancellationToken { get; set; }
+        /// <summary>
+        /// Disables the SSL requirement for sites and pages.
+        /// </summary>
+        public void DisableSslForSitesAndPages()
+        {
+            SqlCommand( "UPDATE [Site] SET [RequiresEncryption] = 0" );
+            SqlCommand( "UPDATE [Page] SET [RequiresEncryption] = 0" );
+        }
+
+        #endregion
+
+        #region Data Scrubbing
+
+        /// <summary>
+        /// Generates the random email addresses.
+        /// </summary>
+        /// <param name="actionData">The action data.</param>
+        public void GenerateRandomEmailAddresses()
+        {
+            var emailRegex = new Regex( "^\\w+@([a-zA-Z_]+?\\.)+?[a-zA-Z]{2,}$" );
+            var tableContent = new Dictionary<string, string[]>
+            {
+                { "BenevolenceRequest", new[] { "Email", "RequestText", "ResultSummary" } },
+                { "Communication", new[] { "FromEmail", "ReplyToEmail", "CCEmails", "BCCEmails", "Message" } },
+                { "CommunicationTemplate", new[] { "FromEmail", "ReplyToEmail", "CCEmails", "BCCEmails" } },
+                { "EventItemOccurrence", new[] { "ContactEmail" } },
+                { "PrayerRequest", new[] { "Email" } },
+                { "Registration", new[] { "ConfirmationEmail" } },
+                { "RegistrationTemplate", new[] { "ConfirmationFromEmail", "ReminderFromEmail", "PaymentReminderFromEmail", "WaitListTransitionFromEmail" } },
+                { "ServiceJob", new[] { "NotificationEmails" } },
+                { "Note", new[] { "Text" } },
+                { "HtmlContent", new[] { "Content" } }
+            };
+            int stepCount = 3 + tableContent.Count - 1;
+
+            string replaceEmail( string value )
+            {
+                return emailRegex.Replace( value, ( match ) =>
+                {
+                    return GenerateFakeEmailAddressForAddress( match.Value );
+                } );
+            }
+
+            //
+            // Stage 1: Replace all Person e-mail addresses.
+            //
+            var peopleAddresses = SqlQuery<int, string>( "SELECT [Id], [Email] FROM [Person] WHERE [Email] IS NOT NULL AND [Email] != ''" );
+            for ( int i = 0; i < peopleAddresses.Count; i++ )
+            {
+                int personId = peopleAddresses[i].Item1;
+                string email = GenerateFakeEmailAddressForAddress( peopleAddresses[i].Item2 );
+
+                SqlCommand( $"UPDATE [Person] SET [Email] = '{ email }' WHERE [Id] = { personId }" );
+
+                Progress( i / (double)peopleAddresses.Count, 1, stepCount );
+            }
+
+            //
+            // Stage 2: Replace all AttributeValue e-mail addresses.
+            //
+            var fieldTypeIds = new List<int>
+            {
+                GetFieldTypeId( "Rock.Field.Types.TextFieldType" ).Value,
+                GetFieldTypeId( "Rock.Field.Types.EmailFieldType" ).Value,
+                GetFieldTypeId( "Rock.Field.Types.CodeEditorFieldType" ).Value,
+                GetFieldTypeId( "Rock.Field.Types.HtmlFieldType" ).Value,
+                GetFieldTypeId( "Rock.Field.Types.MarkdownFieldType" ).Value,
+                GetFieldTypeId( "Rock.Field.Types.MemoFieldType" ).Value
+            };
+
+            var attributeValues = SqlQuery<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({ string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) ) }) AND AV.[Value] LIKE '%@%'" );
+            for ( int i = 0; i < attributeValues.Count; i++ )
+            {
+                int valueId = attributeValues[i].Item1;
+                string value = attributeValues[i].Item2;
+
+                var newValue = replaceEmail( value );
+
+                if ( value != newValue )
+                {
+                    SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { valueId }", new Dictionary<string, object>
+                    {
+                        { "Value", newValue }
+                    } );
+                }
+
+                Progress( i / (double)attributeValues.Count, 2, stepCount );
+            }
+
+            //
+            // Stage 3: Scrub the Email Exception List global attribute.
+            //
+            var emailExceptionListValue = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'EmailExceptionsList' AND [EntityTypeId] IS NULL" );
+            SetGlobalAttributeValue( "EmailExceptionsList", replaceEmail( emailExceptionListValue ) );
+
+            //
+            // Stage 3: Scan and replace e-mail addresses in misc data.
+            //
+            int tableStep = 0;
+            foreach ( var tc in tableContent )
+            {
+                ScrubTableTextColumns( tc.Key, tc.Value, replaceEmail, 3 + tableStep, stepCount );
+                tableStep++;
+            }
+        }
+
+        // TODO: Scrub attribute values.
+        // TODO: Prune Analytics Tables
+
+        #endregion
+
+        // TODO: Organization Name, Organization Address, Organization Email, Organization Website, Organization Phone
+
     }
 }

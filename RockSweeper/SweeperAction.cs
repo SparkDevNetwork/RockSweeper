@@ -4,6 +4,16 @@ namespace RockSweeper
 {
     public enum SweeperAction
     {
+        #region General
+
+        [Title( "Disable SSL for Sites and Pages" )]
+        [Description( "Modifies all Sites and Pages and removes the requirement for an SSL connection." )]
+        [Category( "General" )]
+        [DefaultValue( true )]
+        DisableSslForSitesAndPages,
+
+        #endregion
+
         #region System Settings
 
         [Title( "Sanitize Application Roots" )]
@@ -119,6 +129,11 @@ namespace RockSweeper
         [Category( "System Settings" )]
         ResetPhoneSystems,
 
+        [Title( "Reset Google API Keys" )]
+        [Description( "Clears the Google API keys stored in global attributes." ) ]
+        [Category( "System Settings" )]
+        ResetGoogleApiKeys,
+
         #endregion
 
         #region Rock Jobs
@@ -161,6 +176,15 @@ namespace RockSweeper
         [Category( "Storage" )]
         [AfterAction( MoveBinaryFilesIntoDatabase )]
         ReplaceDatabaseDocumentsWithEmptyPlaceholders,
+
+        #endregion
+
+        #region Data Scrubbing
+
+        [Title( "Generate Random Email Addresses" )]
+        [Description( "Replaces any e-mail addresses found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
+        GenerateRandomEmailAddresses,
 
         #endregion
     }
