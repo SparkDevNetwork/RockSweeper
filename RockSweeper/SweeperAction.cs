@@ -186,6 +186,43 @@ namespace RockSweeper
         [Category( "Data Scrubbing" )]
         GenerateRandomEmailAddresses,
 
+        [Title( "Empty Analytics Source Tables" )]
+        [Description( "Truncates the AnalyticsSource* tables so they contain no data." )]
+        [Category( "Data Scrubbing" )]
+        EmptyAnalyticsSourceTables,
+
+        [Title( "Generate Random Logins" )]
+        [Description( "Replaces any login names found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
+        GenerateRandomLogins,
+
+        [Title( "Insert History Placeholders" )]
+        [Description( "Modifies all History records to remove any identifying information." )]
+        [Category( "Data Scrubbing" )]
+        [AfterAction( GenerateRandomLogins )]
+        InsertHistoryPlaceholders,
+
+        [Title( "Sanitize Background Check Data" )]
+        [Description( "Clears as much sensitive information from background checks as possible." )]
+        [Category( "Data Scrubbing" )]
+        [AfterAction( GenerateRandomNames )]
+        SanitizeBackgroundCheckData,
+
+        [Title( "Generate Random Phone Numbers " )]
+        [Description( "Replaces any phone numbers found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
+        GenerateRandomPhoneNumbers,
+
+        [Title( "Sanitize Benevolence Request Data" )]
+        [Description( "Scrubs out any government IDs as well as request and result text." )]
+        [Category( "Data Scrubbing" )]
+        SanitizeBenevolenceRequestData,
+
+        [Title( "Generate Random Names" )]
+        [Description( "Replaces any person names with randomized names." )]
+        [Category( "Data Scrubbing" )]
+        GenerateRandomNames,
+
         #endregion
     }
 }
