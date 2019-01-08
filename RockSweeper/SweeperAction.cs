@@ -252,7 +252,12 @@ namespace RockSweeper
         [Description( "Scrubs the organization name and URL as well as campus names and URLs." )]
         [Category( "Data Scrubbing" )]
         GenerateOrganizationAndCampuses,
-        
+
+        [Title( "Generate Random Location Addresses" )]
+        [Description( "Generates random addresses in the database, centered around Phoenix, AZ." )]
+        [Category( "Data Scrubbing" )]
+        GenerateRandomLocationAddresses,
+
         #endregion
     }
 }

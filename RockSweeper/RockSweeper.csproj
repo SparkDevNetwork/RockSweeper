@@ -65,12 +65,16 @@
     <Reference Include="PCRE.NET, Version=0.7.1.0, Culture=neutral, PublicKeyToken=8f58d558eeff25a3, processorArchitecture=MSIL">
       <HintPath>..\packages\PCRE.NET.0.7.1\lib\net45\PCRE.NET.dll</HintPath>
     </Reference>
+    <Reference Include="RestSharp, Version=106.6.5.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.6.5\lib\net452\RestSharp.dll</HintPath>
+    </Reference>
     <Reference Include="SqlConnectionDialog, Version=1.0.0.5, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SQLConnectionStringUI.1.0.0.5\lib\net45\SqlConnectionDialog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -93,6 +97,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AfterActionAttribute.cs" />
+    <Compile Include="Coordinates.cs" />
+    <Compile Include="Dialogs\PreferencesDialog.xaml.cs">
+      <DependentUpon>PreferencesDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Extensions.cs" />
     <Compile Include="ProgressLine.cs" />
     <Compile Include="RockDomain.cs" />
@@ -105,6 +113,10 @@
     <Compile Include="SweeperOption.cs" />
     <Compile Include="SweeperAction.cs" />
     <Compile Include="TitleAttribute.cs" />
+    <Page Include="Dialogs\PreferencesDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Dialogs\SqlConnectionDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -149,6 +161,7 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <EmbeddedResource Include="Resources\en_rock.locale.json" />
+    <EmbeddedResource Include="Resources\city_postal.csv" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

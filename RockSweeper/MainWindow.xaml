@@ -14,6 +14,7 @@
                 <Button Content="None" Click="SelectNone_Click" IsEnabled="{Binding CanConfigure}" />
             </ToolBar>
             <ToolBar>
+                <Button Content="Preferences" Click="Preferences_Click" />
                 <Button Content="Open Database" Click="OpenDatabase_Click" IsEnabled="{Binding CanConfigure}" />
                 <Button Content="Select Rock Folder" Click="SelectRockFolder_Click" IsEnabled="{Binding CanConfigure}" />
                 <Button Content="Start" Click="Start_Click" IsEnabled="{Binding CanStart}" />

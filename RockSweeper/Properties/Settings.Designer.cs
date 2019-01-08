@@ -22,5 +22,29 @@ namespace RockSweeper.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HereAppId {
+            get {
+                return ((string)(this["HereAppId"]));
+            }
+            set {
+                this["HereAppId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HereAppCode {
+            get {
+                return ((string)(this["HereAppCode"]));
+            }
+            set {
+                this["HereAppCode"] = value;
+            }
+        }
     }
 }

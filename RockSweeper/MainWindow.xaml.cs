@@ -226,6 +226,16 @@ namespace RockSweeper
         #region Event Handlers
 
         /// <summary>
+        /// Handles the Click event of the Preferences control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
+        protected void Preferences_Click( object sender, RoutedEventArgs e )
+        {
+            new Dialogs.PreferencesDialog().ShowDialog();
+        }
+
+        /// <summary>
         /// Handles the Click event of the OpenDatabase control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
