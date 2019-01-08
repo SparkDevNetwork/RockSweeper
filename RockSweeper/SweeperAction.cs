@@ -12,6 +12,16 @@ namespace RockSweeper
         [DefaultValue( true )]
         DisableSslForSitesAndPages,
 
+        [Title( "Clear Exception Log" )]
+        [Description( "Clears out the contents of the Rock Exception Log." )]
+        [Category( "General" )]
+        ClearExceptionLog,
+
+        [Title( "Clear Person Tokens" )]
+        [Description( "Clears out the contents of the PersonToken table." )]
+        [Category( "General" )]
+        ClearPersonTokens,
+
         #endregion
 
         #region System Settings
@@ -223,6 +233,26 @@ namespace RockSweeper
         [Category( "Data Scrubbing" )]
         GenerateRandomNames,
 
+        [Title( "Sanitize Devices" )]
+        [Description( "Replacing IPAddress with fake address information." )]
+        [Category( "Data Scrubbing" )]
+        SanitizeDevices,
+
+        [Title( "Sanitize Content Channel Items" )]
+        [Description( "Replaces content channel item content with ipsum text." )]
+        [Category( "Data Scrubbing" )]
+        SanitizeContentChannelItems,
+
+        [Title( "Scrub Workflow Log" )]
+        [Description( "Modifies the log text to only include the activity and action and not the specific action text." )]
+        [Category( "Data Scrubbing" )]
+        ScrubWorkflowLog,
+
+        [Title( "Generate Organization and Campuses" )]
+        [Description( "Scrubs the organization name and URL as well as campus names and URLs." )]
+        [Category( "Data Scrubbing" )]
+        GenerateOrganizationAndCampuses,
+        
         #endregion
     }
 }

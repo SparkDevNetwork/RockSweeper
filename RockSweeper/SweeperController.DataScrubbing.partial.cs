@@ -505,6 +505,9 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
             }
         }
 
+        /// <summary>
+        /// Generates the random names.
+        /// </summary>
         public void GenerateRandomNames()
         {
             var processedPersonIds = new List<int>();
@@ -796,6 +799,11 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             var fromNameLookup = new Dictionary<string, string>();
             string scrubFromName( string oldValue )
             {
+                if ( oldValue.StartsWith( "{" ) )
+                {
+                    return oldValue;
+                }
+
                 if ( !fromNameLookup.ContainsKey( oldValue ) )
                 {
                     fromNameLookup.Add( oldValue, DataFaker.Name.FullName() );
@@ -811,7 +819,126 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             }
         }
 
-        // TODO: Scrub attribute values.
-        // TODO: Organization Name, Organization Address, Organization Website
+        /// <summary>
+        /// Sanitizes the devices.
+        /// </summary>
+        public void SanitizeDevices()
+        {
+            var devices = SqlQuery<int, string>( "SELECT [Id], [IPAddress] FROM [Device]" );
+
+            foreach ( var device in devices )
+            {
+                var changes = new Dictionary<string, object>();
+
+                if ( device.Item2 == "::1" || device.Item2 == "127.0.0.1" )
+                {
+                    continue;
+                }
+
+                if ( System.Net.IPAddress.TryParse( device.Item2, out System.Net.IPAddress ipAddress ) )
+                {
+                    ushort subAddress = ( ushort ) device.Item1;
+                    var bytes = BitConverter.GetBytes( subAddress );
+
+                    changes.Add( "IPAddress", $"172.16.{ bytes[1] }.{ bytes[0] }" );
+                }
+                else
+                {
+                    changes.Add( "IPAddress", $"device-{ device.Item1 }.rocksolidchurchdemo.com" );
+                }
+
+                UpdateDatabaseRecord( "Device", device.Item1, changes );
+            }
+        }
+
+        /// <summary>
+        /// Sanitizes the content channel items.
+        /// </summary>
+        public void SanitizeContentChannelItems()
+        {
+            var contentChannelItems = SqlQuery<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
+            var regex = new PCRE.PcreRegex( @"(<[^>]*>(*SKIP)(*F)|[^\W]\w+)" );
+
+            for ( int i = 0; i < contentChannelItems.Count; i++ )
+            {
+                var changes = new Dictionary<string, object>();
+
+                if ( !string.IsNullOrWhiteSpace( contentChannelItems[i].Item2 ) )
+                {
+                    var newValue = regex.Replace( contentChannelItems[i].Item2, ( m ) =>
+                    {
+                        return DataFaker.Lorem.Word();
+                    } );
+
+                    if ( newValue != contentChannelItems[i].Item2 )
+                    {
+                        changes.Add( "Content", newValue );
+                    }
+                }
+
+                if ( changes.Any() )
+                {
+                    UpdateDatabaseRecord( "ContentChannelItem", contentChannelItems[i].Item1, changes );
+                }
+
+                Progress( i / ( double ) contentChannelItems.Count );
+            }
+        }
+
+        /// <summary>
+        /// Scrubs the workflow log.
+        /// </summary>
+        public void ScrubWorkflowLog()
+        {
+            ScrubTableTextColumn( "WorkflowLog", "LogText", ( s ) =>
+            {
+                if ( s.Contains( ">" ) )
+                {
+                    var sections = s.Split( new[] { ':' }, 2 );
+
+                    if ( sections.Length == 2 )
+                    {
+                        if ( sections[1] != " Activated" && sections[1] != " Processing..." && sections[1] != " Completed" )
+                        {
+                            return $"{ sections[0] }: HIDDEN";
+                        }
+                    }
+                }
+
+                return s;
+            }, null, null );
+        }
+
+        /// <summary>
+        /// Generates the organization and campuses.
+        /// </summary>
+        public void GenerateOrganizationAndCampuses()
+        {
+            string organizationCity = DataFaker.Address.City();
+
+            SetGlobalAttributeValue( "OrganizationName", $"{ organizationCity } Community Church" );
+            SetGlobalAttributeValue( "OrganizationWebsite", $"http://www.{ organizationCity.Replace( " ", "" ).ToLower() }communitychurch.org/" );
+
+            var campuses = SqlQuery<int, string, string>( "SELECT [Id], [Url], [Description] FROM [Campus]" );
+            foreach ( var campus in campuses )
+            {
+                var changes = new Dictionary<string, object>
+                {
+                    { "Name", DataFaker.Address.City() }
+                };
+
+                if ( !string.IsNullOrWhiteSpace( campus.Item2 ) )
+                {
+                    changes.Add( "Url", $"http://{ changes["Name"].ToString().Replace( " ", "" ).ToLower() }.{ organizationCity.Replace( " ", "" ).ToLower() }communitychurch.org/" );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( campus.Item3 ) )
+                {
+                    changes.Add( "Description", DataFaker.Lorem.Sentence() );
+                }
+
+                UpdateDatabaseRecord( "Campus", campus.Item1, changes );
+            }
+        }
     }
 }
