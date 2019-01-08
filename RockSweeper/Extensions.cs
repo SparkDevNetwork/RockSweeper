@@ -77,5 +77,36 @@ namespace RockSweeper
                 yield return elem.Key;
             }
         }
+
+        /// <summary>
+        /// Randomizes the letters and numbers in a string.
+        /// </summary>
+        /// <param name="s">The s.</param>
+        /// <returns></returns>
+        public static string RandomizeLettersAndNumbers( this string s )
+        {
+            var randomizer = new Bogus.Randomizer();
+            var chars = s.ToArray();
+
+            for ( int i = 0; i < chars.Length; i++ )
+            {
+                char c = chars[i];
+
+                if ( char.IsLower( c ) )
+                {
+                    chars[i] = randomizer.Char( 'a', 'z' );
+                }
+                else if ( char.IsUpper( c ) )
+                {
+                    chars[i] = randomizer.Char( 'A', 'Z' );
+                }
+                else if ( char.IsNumber( c ) )
+                {
+                    chars[i] = randomizer.Char( '0', '9' );
+                }
+            }
+
+            return new string( chars );
+        }
     }
 }
