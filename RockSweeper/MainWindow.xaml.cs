@@ -215,6 +215,9 @@ namespace RockSweeper
 
             StatusBarText = string.Empty;
 
+            Sweeper.Dispose();
+            Sweeper = null;
+
             Dispatcher.Invoke( () =>
             {
                 MessageBox.Show( this, "Finished processing database.", "Completed" );

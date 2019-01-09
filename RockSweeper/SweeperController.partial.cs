@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace RockSweeper
 {
-    public partial class SweeperController
+    public partial class SweeperController : IDisposable
     {
         #region Properties
 
@@ -88,6 +88,14 @@ namespace RockSweeper
         /// </value>
         protected Bogus.Faker DataFaker { get; private set; }
 
+        /// <summary>
+        /// Gets the geo lookup cache.
+        /// </summary>
+        /// <value>
+        /// The geo lookup cache.
+        /// </value>
+        protected Dictionary<string, Address> GeoLookupCache { get; private set; }
+
         #endregion
 
         #region Constructor
@@ -114,7 +122,19 @@ namespace RockSweeper
             PhoneMap = new Dictionary<string, string>();
             LoginMap = new Dictionary<string, string>();
 
+            GeoLookupCache = Support.LoadGeocodeCache();
+
             SetupDataFaker();
+
+            GetBestAddressForCoordinates( new Coordinates( 34.472354, -117.462594 ) );
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Support.SaveGeocodeCache( GeoLookupCache );
         }
 
         #endregion
@@ -290,6 +310,61 @@ namespace RockSweeper
             }
 
             return new string( newPhone );
+        }
+
+        /// <summary>
+        /// Gets the best address for coordinates.
+        /// </summary>
+        /// <param name="coordinates">The coordinates.</param>
+        /// <returns></returns>
+        protected Address GetBestAddressForCoordinates( Coordinates coordinates )
+        {
+            Address address;
+
+            if ( GeoLookupCache.ContainsKey( coordinates.ToString() ) )
+            {
+                return GeoLookupCache[coordinates.ToString()];
+            }
+
+            var client = new RestSharp.RestClient( "https://reverse.geocoder.api.here.com/6.2" );
+            var req = new RestSharp.RestRequest( "reversegeocode.json" );
+            req.AddParameter( "prox", coordinates.ToString() );
+            req.AddParameter( "mode", "retrieveAddresses" );
+            req.AddParameter( "maxresults", 1 );
+            req.AddParameter( "app_id", Properties.Settings.Default.HereAppId );
+            req.AddParameter( "app_code", Properties.Settings.Default.HereAppCode );
+
+            var resp = client.Execute<HereRestApi.ApiResponse<HereRestApi.LocationResult>>( req );
+
+            if ( !resp.Data.Response.View.Any() || !resp.Data.Response.View.First().Result.Any() )
+            {
+                address = new Address
+                {
+                    Street1 = DataFaker.Address.StreetAddress(),
+                    City = DataFaker.Address.City(),
+                    State = DataFaker.Address.State(),
+                    County = DataFaker.Address.County(),
+                    PostalCode = DataFaker.Address.ZipCode(),
+                    Country = "US"
+                };
+            }
+            else
+            {
+                var location = resp.Data.Response.View.First().Result.First().Location;
+                address = new Address
+                {
+                    Street1 = $"{ location.Address.HouseNumber } { location.Address.Street }",
+                    City = location.Address.City,
+                    State = location.Address.State,
+                    County = location.Address.County,
+                    PostalCode = location.Address.PostalCode,
+                    Country = location.Address.Country.Substring( 0, 2 )
+                };
+            }
+
+            GeoLookupCache.Add( coordinates.ToString(), address );
+
+            return address;
         }
 
         #endregion

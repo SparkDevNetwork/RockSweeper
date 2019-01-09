@@ -1050,7 +1050,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                         changes.Add( "City", newCity );
                         changes.Add( "State", "AZ" );
     
-                    if ( !string.IsNullOrWhiteSpace( street2 ) )
+                        if ( !string.IsNullOrWhiteSpace( street2 ) )
                         {
                             changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
                         }
@@ -1079,6 +1079,13 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             var centerLocation = SqlQuery<double, double>( $"SELECT AVG([GeoPoint].Lat), AVG([GeoPoint].Long) FROM Location WHERE GeoPoint IS NOT NULL AND [State] = '{ defaultState }' AND [Country] = 'US'" ).First();
             var targetCenterLocation = new Coordinates( 33.499127, -112.108061 );
             var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Item1, targetCenterLocation.Longitude - centerLocation.Item2 );
+            // jitter Latitude of 0.0144927 = 1 mile; Longitude of 0.0144927 = 1 mile (at equator)
+
+            var x = SqlQuery<double, double>( "SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Id] = 14" ).First();
+            var lat = x.Item1 + adjustCoordinates.Latitude;
+            var lon = x.Item2 + adjustCoordinates.Longitude;
+
+            var addr = GetBestAddressForCoordinates( new Coordinates( lat, lon ) );
         }
     }
 }
