@@ -16,6 +16,21 @@ namespace RockSweeper
             Longitude = longitude;
         }
 
+        public Coordinates( Tuple<double, double> latlong )
+            : this( latlong.Item1, latlong.Item2 )
+        {
+        }
+
+        public Coordinates( string latlong )
+            : this( double.Parse( latlong.Split( ',' )[0] ), double.Parse( latlong.Split( ',' )[1] ) )
+        {
+        }
+
+        public Coordinates CoordinatesByAdjusting( double latitude, double longitude )
+        {
+            return new Coordinates( Latitude + latitude, Longitude + longitude );
+        }
+
         public double DistanceTo( Coordinates targetCoordinates )
         {
             return DistanceTo( targetCoordinates, UnitOfLength.Kilometers );

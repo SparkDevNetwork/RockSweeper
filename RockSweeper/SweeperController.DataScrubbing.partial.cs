@@ -956,7 +956,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// </summary>
         public void GenerateRandomLocationAddresses()
         {
-            int stepCount = 2;
+            int stepCount = 3;
             var cityPostalCodes = new Dictionary<string, List<string>>();
             string defaultState = SqlScalar<string>( "SELECT TOP 1 [State] FROM [Location] GROUP BY [State] ORDER BY COUNT(*) DESC" );
 
@@ -1086,16 +1086,137 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 }
             }
 
-            var centerLocation = SqlQuery<double, double>( $"SELECT AVG([GeoPoint].Lat), AVG([GeoPoint].Long) FROM Location WHERE GeoPoint IS NOT NULL AND [State] = '{ defaultState }' AND [Country] = 'US'" ).First();
-            var targetCenterLocation = new Coordinates( 33.499127, -112.108061 );
-            var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Item1, targetCenterLocation.Longitude - centerLocation.Item2 );
-            // jitter Latitude of 0.0144927 = 1 mile; Longitude of 0.0144927 = 1 mile (at equator)
+            double radiusDistance = 35 * 1609.344;
+            var centerLocation = new Coordinates( SqlQuery<double, double>( $"SELECT AVG([GeoPoint].Lat), AVG([GeoPoint].Long) FROM Location WHERE GeoPoint IS NOT NULL AND [State] = '{ defaultState }' AND [Country] = 'US'" ).First() );
+            var targetCenterLocation = new Coordinates( Properties.Settings.Default.TargetGeoCenter );
+            var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Latitude, targetCenterLocation.Longitude - centerLocation.Longitude );
 
-            var x = SqlQuery<double, double>( "SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Id] = 14" ).First();
-            var lat = x.Item1 + adjustCoordinates.Latitude;
-            var lon = x.Item2 + adjustCoordinates.Longitude;
+            //
+            // Step 2: Move all locations with a valid GeoPoint inside our radius.
+            //
+            var geoLocations = SqlQuery( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) < { radiusDistance }" );
+            for ( int i = 0; i < geoLocations.Count; i++ )
+            {
+                var locationId = ( int ) geoLocations[i]["Id"];
+                var latitude = ( double ) geoLocations[i]["Latitude"];
+                var longitude = ( double ) geoLocations[i]["Longitude"];
+                var street1 = ( string ) geoLocations[i]["Street1"];
+                var street2 = ( string ) geoLocations[i]["Street2"];
+                var city = ( string ) geoLocations[i]["City"];
+                var county = ( string ) geoLocations[i]["County"];
+                var postalCode = ( string ) geoLocations[i]["PostalCode"];
+                var state = ( string ) geoLocations[i]["State"];
+                var country = ( string ) geoLocations[i]["Country"];
+                var changes = new Dictionary<string, object>();
 
-            var addr = GetBestAddressForCoordinates( new Coordinates( lat, lon ) );
+                var coordinates = new Coordinates( latitude, longitude ).CoordinatesByAdjusting( adjustCoordinates.Latitude, adjustCoordinates.Longitude );
+
+                if ( Properties.Settings.Default.JitterAddresses )
+                {
+                    //
+                    // Jitter the coordinates by +/- one mile.
+                    //
+                    coordinates = coordinates.CoordinatesByAdjusting( DataFaker.Random.Double( -0.0144927, 0.0144927 ), DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
+                }
+
+                var address = GetBestAddressForCoordinates( coordinates );
+
+                changes.Add( "GeoPoint", coordinates );
+
+                if ( !string.IsNullOrWhiteSpace( street1 ) )
+                {
+                    changes.Add( "Street1", address.Street1 );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( city ) )
+                {
+                    changes.Add( "City", address.City );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( county ) )
+                {
+                    changes.Add( "County", address.Country );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( postalCode ) )
+                {
+                    changes.Add( "PostalCode", address.PostalCode );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( state ) )
+                {
+                    changes.Add( "State", address.State );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( country ) )
+                {
+                    changes.Add( "Country", address.Country );
+                }
+
+                UpdateDatabaseRecord( "Location", locationId, changes );
+
+                Progress( i / ( double ) geoLocations.Count, 2, stepCount );
+            }
+
+            //
+            // Step 3: Add a 1-mile jitter to any address outside our radius.
+            //
+            geoLocations = SqlQuery( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) >= { radiusDistance }" );
+            for ( int i = 0; i < geoLocations.Count; i++ )
+            {
+                var locationId = ( int ) geoLocations[i]["Id"];
+                var latitude = ( double ) geoLocations[i]["Latitude"];
+                var longitude = ( double ) geoLocations[i]["Longitude"];
+                var street1 = ( string ) geoLocations[i]["Street1"];
+                var street2 = ( string ) geoLocations[i]["Street2"];
+                var city = ( string ) geoLocations[i]["City"];
+                var county = ( string ) geoLocations[i]["County"];
+                var postalCode = ( string ) geoLocations[i]["PostalCode"];
+                var state = ( string ) geoLocations[i]["State"];
+                var country = ( string ) geoLocations[i]["Country"];
+                var changes = new Dictionary<string, object>();
+
+                var coordinates = new Coordinates( latitude, longitude );
+                coordinates = coordinates.CoordinatesByAdjusting( DataFaker.Random.Double( -0.0144927, 0.0144927 ), DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
+
+                var address = GetBestAddressForCoordinates( coordinates );
+
+                changes.Add( "GeoPoint", coordinates );
+
+                if ( !string.IsNullOrWhiteSpace( street1 ) )
+                {
+                    changes.Add( "Street1", address.Street1 );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( city ) )
+                {
+                    changes.Add( "City", address.City );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( county ) )
+                {
+                    changes.Add( "County", address.Country );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( postalCode ) )
+                {
+                    changes.Add( "PostalCode", address.PostalCode );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( state ) )
+                {
+                    changes.Add( "State", address.State );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( country ) )
+                {
+                    changes.Add( "Country", address.Country );
+                }
+
+                UpdateDatabaseRecord( "Location", locationId, changes );
+
+                Progress( i / ( double ) geoLocations.Count, 3, stepCount );
+            }
         }
     }
 }

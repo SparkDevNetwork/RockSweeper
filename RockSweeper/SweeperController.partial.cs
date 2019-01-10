@@ -637,7 +637,24 @@ namespace RockSweeper
         {
             if ( updatedValues.Any() )
             {
-                var updateStrings = updatedValues.Keys.Select( k => $"[{ k }] = @{ k }" );
+                var updateStrings = new List<string>();
+
+                foreach ( var k in updatedValues.Keys.ToList() )
+                {
+                    if ( updatedValues[k] is Coordinates coordinates )
+                    {
+                        updatedValues.Remove( k );
+                        updatedValues.Add( $"{ k }Latitude", coordinates.Latitude );
+                        updatedValues.Add( $"{ k }Longitude", coordinates.Longitude );
+
+                        updateStrings.Add( $"[{ k }] = geography::Point(@{ k }Latitude, @{ k }Longitude, 4326)" );
+                    }
+                    else
+                    {
+                        updateStrings.Add( $"[{ k }] = @{ k }" );
+                    }
+                }
+
                 SqlCommand( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }", updatedValues );
             }
         }

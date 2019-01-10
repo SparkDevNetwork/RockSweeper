@@ -46,5 +46,29 @@ namespace RockSweeper.Properties {
                 this["HereAppCode"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("33.499127, -112.108061")]
+        public string TargetGeoCenter {
+            get {
+                return ((string)(this["TargetGeoCenter"]));
+            }
+            set {
+                this["TargetGeoCenter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool JitterAddresses {
+            get {
+                return ((bool)(this["JitterAddresses"]));
+            }
+            set {
+                this["JitterAddresses"] = value;
+            }
+        }
     }
 }

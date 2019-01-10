@@ -1,16 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+﻿using System.Windows;
 
 namespace RockSweeper.Dialogs
 {
@@ -25,12 +13,18 @@ namespace RockSweeper.Dialogs
 
         public string HereAppCode { get; set; }
 
+        public string TargetGeoCenter { get; set; }
+
+        public bool JitterAddresses { get; set; }
+
         #endregion
 
         public PreferencesDialog()
         {
             HereAppId = Properties.Settings.Default.HereAppId;
             HereAppCode = Properties.Settings.Default.HereAppCode;
+            TargetGeoCenter = Properties.Settings.Default.TargetGeoCenter;
+            JitterAddresses = Properties.Settings.Default.JitterAddresses;
 
             InitializeComponent();
             DataContext = this;
@@ -47,6 +41,8 @@ namespace RockSweeper.Dialogs
         {
             Properties.Settings.Default.HereAppId = HereAppId;
             Properties.Settings.Default.HereAppCode = HereAppCode;
+            Properties.Settings.Default.TargetGeoCenter = TargetGeoCenter;
+            Properties.Settings.Default.JitterAddresses = JitterAddresses;
             Properties.Settings.Default.Save();
 
             DialogResult = true;

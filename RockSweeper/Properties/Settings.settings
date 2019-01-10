@@ -8,5 +8,11 @@
     <Setting Name="HereAppCode" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="TargetGeoCenter" Type="System.String" Scope="User">
+      <Value Profile="(Default)">33.499127, -112.108061</Value>
+    </Setting>
+    <Setting Name="JitterAddresses" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
