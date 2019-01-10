@@ -43,6 +43,12 @@ namespace RockSweeper
 
         #endregion
 
+        #region Geocode Cache Methods
+
+        /// <summary>
+        /// Loads the geocode cache.
+        /// </summary>
+        /// <returns></returns>
         static public Dictionary<string, Address> LoadGeocodeCache()
         {
             if ( File.Exists( GetGeocodeCachePath() ) )
@@ -53,9 +59,15 @@ namespace RockSweeper
             return new Dictionary<string, Address>();
         }
 
+        /// <summary>
+        /// Saves the geocode cache.
+        /// </summary>
+        /// <param name="cache">The cache.</param>
         static public void SaveGeocodeCache( Dictionary<string, Address> cache )
         {
             File.WriteAllText( GetGeocodeCachePath(), JsonConvert.SerializeObject( cache ) );
         }
+
+        #endregion
     }
 }
