@@ -942,6 +942,16 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         }
 
         /// <summary>
+        /// Sanitizes the interaction data.
+        /// </summary>
+        public void SanitizeInteractionData()
+        {
+            SqlCommand( "UPDATE [InteractionChannel] SET [ChannelData] = NULL" );
+            SqlCommand( "UPDATE [InteractionComponent] SET [ComponentData] = NULL" );
+            SqlCommand( "UPDATE [Interaction] SET [InteractionData] = NULL" );
+        }
+
+        /// <summary>
         /// Generates random location addresses.
         /// </summary>
         public void GenerateRandomLocationAddresses()

@@ -253,6 +253,11 @@ namespace RockSweeper
         [Category( "Data Scrubbing" )]
         GenerateOrganizationAndCampuses,
 
+        [Title( "Sanitize Interaction Data" )]
+        [Description( "Removes all custom data from Interactions, InteractionComponents and InteractionChannels." )]
+        [Category( "Data Scrubbing" )]
+        SanitizeInteractionData,
+
         [Title( "Generate Random Location Addresses" )]
         [Description( "Generates random addresses in the database, centered around Phoenix, AZ." )]
         [Category( "Data Scrubbing" )]
