@@ -1087,7 +1087,8 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             }
 
             double radiusDistance = 35 * 1609.344;
-            var centerLocation = new Coordinates( SqlQuery<double, double>( $"SELECT AVG([GeoPoint].Lat), AVG([GeoPoint].Long) FROM Location WHERE GeoPoint IS NOT NULL AND [State] = '{ defaultState }' AND [Country] = 'US'" ).First() );
+            var centerLocationGuid = GetGlobalAttributeValue( "OrganizationAddress" );
+            var centerLocation = new Coordinates( SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{ centerLocationGuid }'" ).First() );
             var targetCenterLocation = new Coordinates( Properties.Settings.Default.TargetGeoCenter );
             var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Latitude, targetCenterLocation.Longitude - centerLocation.Longitude );
 
