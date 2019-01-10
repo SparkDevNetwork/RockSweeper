@@ -96,6 +96,14 @@ namespace RockSweeper
         /// </value>
         protected Dictionary<string, Address> GeoLookupCache { get; private set; }
 
+        /// <summary>
+        /// Gets the geo lookup count.
+        /// </summary>
+        /// <value>
+        /// The geo lookup count.
+        /// </value>
+        protected int GeoLookupCount { get; private set; }
+
         #endregion
 
         #region Constructor
@@ -360,6 +368,16 @@ namespace RockSweeper
             }
 
             GeoLookupCache.Add( coordinates.ToString(), address );
+
+            //
+            // Save the cache every 100 lookups. That way, if there is a crash, we don't lose everything.
+            //
+            GeoLookupCount += 1;
+            if ( GeoLookupCount > 100 )
+            {
+                Support.SaveGeocodeCache( GeoLookupCache );
+                GeoLookupCount = 0;
+            }
 
             return address;
         }
