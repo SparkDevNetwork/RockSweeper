@@ -159,9 +159,9 @@ namespace RockSweeper
             //
             // Stage 3: Scrub the global attributes.
             //
-            var attributeValue = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'EmailExceptionsList' AND [EntityTypeId] IS NULL" );
+            var attributeValue = GetGlobalAttributeValue( "EmailExceptionsList" );
             SetGlobalAttributeValue( "EmailExceptionsList", ScrubEmailAddressForContent( attributeValue ) );
-            attributeValue = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'OrganizationEmail' AND [EntityTypeId] IS NULL" );
+            attributeValue = GetGlobalAttributeValue( "OrganizationEmail" );
             SetGlobalAttributeValue( "OrganizationEmail", ScrubEmailAddressForContent( attributeValue ) );
             Progress( 1.0, 3, stepCount );
 
@@ -444,7 +444,7 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
             //
             // Stage 3: Scrub the global attributes.
             //
-            var attributeValue = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'OrganizationPhone' AND [EntityTypeId] IS NULL" );
+            var attributeValue = GetGlobalAttributeValue( "OrganizationPhone" );
             SetGlobalAttributeValue( "OrganizationPhone", ScrubPhoneNumberForContent( attributeValue ) );
             Progress( 1.0, 3, stepCount );
 

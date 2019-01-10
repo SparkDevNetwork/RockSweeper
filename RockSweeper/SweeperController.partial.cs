@@ -114,7 +114,7 @@ namespace RockSweeper
             Connection.Open();
             //Transaction = Connection.BeginTransaction();
 
-            var internalApplicationRoot = SqlScalar<string>( "SELECT [DefaultValue] FROM [Attribute] WHERE [Key] = 'InternalApplicationRoot' AND [EntityTypeId] IS NULL" );
+            var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
             GetFileUrl = "http://localhost:64706/GetFile.ashx";
 
@@ -746,13 +746,40 @@ WHERE AV.EntityId = 0
         }
 
         /// <summary>
+        /// Gets the global attribute value.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        protected string GetGlobalAttributeValue( string key )
+        {
+            var defaultValue = SqlQuery<int, string>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" ).First();
+            var value = SqlScalar<string>( $"SELECT [Value] FROM [AttributeId] = { defaultValue.Item1 }" );
+
+            return !string.IsNullOrEmpty( value ) ? value : defaultValue.Item2;
+        }
+
+        /// <summary>
         /// Sets the global attribute value.
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
         protected void SetGlobalAttributeValue( string key, string value )
         {
-            SqlCommand( $"UPDATE [Attribute] SET [DefaultValue] = '{ value.Replace( "'", "''" ) }' WHERE [Key] = '{ key.Replace( "'", "''" ) }' AND [EntityTypeId] IS NULL" );
+            var attributeId = SqlScalar<int>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" );
+            var attributeValueId = SqlScalar<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = { attributeId }" );
+            var parameters = new Dictionary<string, object>
+            {
+                { "Value", value }
+            };
+
+            if ( attributeValueId.HasValue )
+            {
+                SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { attributeValueId }", parameters );
+            }
+            else
+            {
+                SqlCommand( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, { attributeValueId.Value }, @Value, NEWID())", parameters );
+            }
         }
 
         /// <summary>
