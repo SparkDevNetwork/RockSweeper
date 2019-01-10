@@ -203,6 +203,11 @@ namespace RockSweeper
                 }
                 catch ( Exception e )
                 {
+                    StatusBarText = string.Empty;
+
+                    Sweeper.Dispose();
+                    Sweeper = null;
+
                     Dispatcher.Invoke( () =>
                     {
                         progressLine.State = ProgressLineState.Failed;
