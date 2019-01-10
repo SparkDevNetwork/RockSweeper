@@ -112,7 +112,6 @@ namespace RockSweeper
             RockWeb = rockWeb;
 
             Connection.Open();
-            //Transaction = Connection.BeginTransaction();
 
             var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
@@ -125,8 +124,6 @@ namespace RockSweeper
             GeoLookupCache = Support.LoadGeocodeCache();
 
             SetupDataFaker();
-
-            GetBestAddressForCoordinates( new Coordinates( 34.472354, -117.462594 ) );
         }
 
         /// <summary>
