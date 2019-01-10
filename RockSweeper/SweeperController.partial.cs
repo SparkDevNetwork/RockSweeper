@@ -749,8 +749,8 @@ WHERE AV.EntityId = 0
         /// <returns></returns>
         protected string GetGlobalAttributeValue( string key )
         {
-            var defaultValue = SqlQuery<int, string>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" ).First();
-            var value = SqlScalar<string>( $"SELECT [Value] FROM [AttributeId] = { defaultValue.Item1 }" );
+            var defaultValue = SqlQuery<int, string>( $"SELECT [Id], [DefaultValue] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" ).First();
+            var value = SqlScalar<string>( $"SELECT [Value] FROM [AttributeValue] WHERE [AttributeId] = { defaultValue.Item1 }" );
 
             return !string.IsNullOrEmpty( value ) ? value : defaultValue.Item2;
         }
