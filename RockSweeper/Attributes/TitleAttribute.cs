@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RockSweeper
+namespace RockSweeper.Attributes
 {
     /// <summary>
     /// Defines the user friendly name of the object.
