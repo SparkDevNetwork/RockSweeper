@@ -96,7 +96,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Address.cs" />
+    <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
     <Compile Include="Utility\Coordinates.cs" />
     <Compile Include="Dialogs\PreferencesDialog.xaml.cs">
@@ -105,7 +105,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="External\HereRestApi.cs" />
     <Compile Include="Utility\ProgressLine.cs" />
-    <Compile Include="RockDomain.cs" />
+    <Compile Include="Utility\RockDomain.cs" />
     <Compile Include="Utility\Support.cs" />
     <Compile Include="SweeperController.partial.cs" />
     <Compile Include="SweeperController.DataScrubbing.partial.cs" />

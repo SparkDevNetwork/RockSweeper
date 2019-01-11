@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Lifetime;
 
-namespace RockSweeper
+namespace RockSweeper.Utility
 {
     /// <summary>
     /// Handles executing code in a custom Rock domain that does not interfere with the main
