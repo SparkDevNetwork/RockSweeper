@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using RockSweeper.Attributes;
 
-namespace RockSweeper
+namespace RockSweeper.Utility
 {
     /// <summary>
     /// Defines a configurable action to perform when sweeping through Rock.

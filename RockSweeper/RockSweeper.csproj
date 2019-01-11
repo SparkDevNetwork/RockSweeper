@@ -98,22 +98,22 @@
     </ApplicationDefinition>
     <Compile Include="Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
-    <Compile Include="Coordinates.cs" />
+    <Compile Include="Utility\Coordinates.cs" />
     <Compile Include="Dialogs\PreferencesDialog.xaml.cs">
       <DependentUpon>PreferencesDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Extensions.cs" />
     <Compile Include="HereRestApi.cs" />
-    <Compile Include="ProgressLine.cs" />
+    <Compile Include="Utility\ProgressLine.cs" />
     <Compile Include="RockDomain.cs" />
-    <Compile Include="Support.cs" />
+    <Compile Include="Utility\Support.cs" />
     <Compile Include="SweeperController.partial.cs" />
     <Compile Include="SweeperController.DataScrubbing.partial.cs" />
     <Compile Include="SweeperController.General.partial.cs" />
     <Compile Include="SweeperController.RockJobs.partial.cs" />
     <Compile Include="SweeperController.Storage.partial.cs" />
     <Compile Include="SweeperController.SystemSettings.partial.cs" />
-    <Compile Include="SweeperOption.cs" />
+    <Compile Include="Utility\SweeperOption.cs" />
     <Compile Include="SweeperAction.cs" />
     <Compile Include="Attributes\TitleAttribute.cs" />
     <Page Include="Dialogs\PreferencesDialog.xaml">

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace RockSweeper
+namespace RockSweeper.Utility
 {
     /// <summary>
     /// Defines a single progress line.

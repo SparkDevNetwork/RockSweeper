@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using RockSweeper.Utility;
 
 namespace RockSweeper
 {
