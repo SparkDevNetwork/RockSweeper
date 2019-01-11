@@ -103,7 +103,7 @@
       <DependentUpon>PreferencesDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Extensions.cs" />
-    <Compile Include="HereRestApi.cs" />
+    <Compile Include="External\HereRestApi.cs" />
     <Compile Include="Utility\ProgressLine.cs" />
     <Compile Include="RockDomain.cs" />
     <Compile Include="Utility\Support.cs" />

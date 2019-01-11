@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace RockSweeper.HereRestApi
+namespace RockSweeper.External.HereRestApi
 {
     public class MetaInfo
     {

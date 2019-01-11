@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using RockSweeper.Utility;
+using HereRestApi = RockSweeper.External.HereRestApi;
 
 namespace RockSweeper
 {
