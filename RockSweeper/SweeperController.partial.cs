@@ -637,7 +637,7 @@ namespace RockSweeper
                 {
                     return command.ExecuteNonQuery();
                 }
-                catch ( Exception e )
+                catch
                 {
                     return 0;
                 }
