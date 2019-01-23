@@ -882,6 +882,23 @@ ELSE
         }
 
         /// <summary>
+        /// Gets the file data from rock the rock database directly.
+        /// </summary>
+        /// <param name="binaryFileId">The binary file identifier.</param>
+        /// <returns></returns>
+        protected MemoryStream GetFileDataFromBinaryFileData( int binaryFileId )
+        {
+            var data = SqlScalar<byte[]>( $"SELECT [Content] FROM [BinaryFileData] WHERE [Id] = { binaryFileId }" );
+
+            if ( data == null )
+            {
+                return null;
+            }
+
+            return new MemoryStream( data );
+        }
+
+        /// <summary>
         /// Determines whether filename is an image.
         /// </summary>
         /// <param name="filename">The filename.</param>
