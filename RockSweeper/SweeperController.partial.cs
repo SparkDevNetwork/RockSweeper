@@ -708,13 +708,16 @@ namespace RockSweeper
         {
             var entityTypeId = GetEntityTypeId( componentType );
 
-            SqlCommand( $@"UPDATE AV
+            if ( entityTypeId.HasValue )
+            {
+                SqlCommand( $@"UPDATE AV
 SET AV.[Value] = 'False'
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 WHERE AV.EntityId = 0
   AND A.[EntityTypeId] = { entityTypeId.Value }
   AND A.[Key] = 'Active'" );
+            }
         }
 
         /// <summary>
@@ -782,7 +785,13 @@ WHERE AV.EntityId = 0
         /// <param name="value">The value.</param>
         protected void SetGlobalAttributeValue( string key, string value )
         {
-            var attributeId = SqlScalar<int>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" );
+            var attributeId = SqlScalar<int?>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" );
+
+            if ( !attributeId.HasValue )
+            {
+                return;
+            }
+
             var attributeValueId = SqlScalar<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = { attributeId }" );
             var parameters = new Dictionary<string, object>
             {
