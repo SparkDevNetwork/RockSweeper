@@ -57,10 +57,20 @@ namespace RockSweeper
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
             int completedCount = 0;
             double fileCount = 0;
+            List<Tuple<int, string, long?, int?, int?>> files;
 
-            var files = SqlQuery<int, string, long?, int?, int?>( $"SELECT [Id],[FileName],[FileSize],[Width],[Height] FROM [BinaryFile] WHERE [StorageEntityTypeId] = { databaseEntityTypeId }" )
+            try
+            {
+                files = SqlQuery<int, string, long?, int?, int?>( $"SELECT [Id],[FileName],[FileSize],[Width],[Height] FROM [BinaryFile] WHERE [StorageEntityTypeId] = { databaseEntityTypeId }" )
                 .Where( f => IsFileNameImage( f.Item2 ) )
                 .ToList();
+            }
+            catch
+            {
+                files = SqlQuery<int, string, long?, int?, int?>( $"SELECT [Id],[FileName],[FileSize],NULL,NULL FROM [BinaryFile] WHERE [StorageEntityTypeId] = { databaseEntityTypeId }" )
+                    .Where( f => IsFileNameImage( f.Item2 ) )
+                    .ToList();
+            }
 
             void processFile( Tuple<int, string, long?, int?, int?> file )
             {
@@ -79,7 +89,7 @@ namespace RockSweeper
                 }
                 else
                 {
-                    using ( var ms = GetFileDataFromRock( fileId ) )
+                    using ( var ms = GetFileDataFromBinaryFileData( fileId ) )
                     {
                         try
                         {
@@ -336,7 +346,7 @@ namespace RockSweeper
                 }
                 else
                 {
-                    using ( var ms = GetFileDataFromRock( fileId ) )
+                    using ( var ms = GetFileDataFromBinaryFileData( fileId ) )
                     {
                         fileSize = ms.Length;
                     }
