@@ -125,7 +125,6 @@ namespace RockSweeper
 
             var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
-            GetFileUrl = "http://localhost:64706/GetFile.ashx";
 
             EmailMap = new Dictionary<string, string>();
             PhoneMap = new Dictionary<string, string>();
@@ -936,34 +935,42 @@ ELSE
         protected void ScrubTableTextColumns( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, int? step, int? stepCount )
         {
             string columns = string.Join( "], [", columnNames );
-            var rows = SqlQuery( $"SELECT [Id], [{ string.Join( "], [", columnNames ) }] FROM [{ tableName }]" );
+            int rowCount = 0;
+            int totalCount = SqlScalar<int>( $"SELECT COUNT(*) FROM [{ tableName }]" );
+            var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
 
-            for ( int i = 0; i < rows.Count; i++ )
+            while ( rows.Count > 0 )
             {
-                int valueId = (int)rows[i]["Id"];
-                var updatedValues = new Dictionary<string, object>();
-
-                foreach ( var c in columnNames )
+                for ( int i = 0; i < rows.Count; i++ )
                 {
-                    var value = (string)rows[i][c];
+                    int valueId = ( int ) rows[i]["Id"];
+                    var updatedValues = new Dictionary<string, object>();
 
-                    if ( !string.IsNullOrWhiteSpace( value ) )
+                    foreach ( var c in columnNames )
                     {
-                        var newValue = replacement( value );
+                        var value = ( string ) rows[i][c];
 
-                        if ( value != newValue )
+                        if ( !string.IsNullOrWhiteSpace( value ) )
                         {
-                            updatedValues.Add( c, newValue );
+                            var newValue = replacement( value );
+
+                            if ( value != newValue )
+                            {
+                                updatedValues.Add( c, newValue );
+                            }
                         }
                     }
+
+                    if ( updatedValues.Any() )
+                    {
+                        UpdateDatabaseRecord( tableName, valueId, updatedValues );
+                    }
+
+                    Progress( ( rowCount + i ) / ( double ) totalCount, step, stepCount );
                 }
 
-                if ( updatedValues.Any() )
-                {
-                    UpdateDatabaseRecord( tableName, valueId, updatedValues );
-                }
-
-                Progress( i / (double)rows.Count, step, stepCount );
+                rowCount += rows.Count;
+                rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
             }
         }
 
