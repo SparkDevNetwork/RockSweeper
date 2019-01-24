@@ -339,9 +339,12 @@ namespace RockSweeper
             //
             // Step 3: Clear any background check field types.
             //
-            int backgroundCheckFieldTypeId = GetFieldTypeId( "Rock.Field.Types.BackgroundCheckFieldType" ).Value;
-            SqlCommand( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = { backgroundCheckFieldTypeId }" );
-            Progress( 1, 3, stepCount );
+            int? backgroundCheckFieldTypeId = GetFieldTypeId( "Rock.Field.Types.BackgroundCheckFieldType" );
+            if ( backgroundCheckFieldTypeId.HasValue )
+            {
+                SqlCommand( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = { backgroundCheckFieldTypeId.Value }" );
+                Progress( 1, 3, stepCount );
+            }
 
             //
             // Step 4: Update name of any background check workflows.
