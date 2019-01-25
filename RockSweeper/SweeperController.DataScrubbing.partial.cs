@@ -28,7 +28,8 @@ namespace RockSweeper
             { "PrayerRequest", new[] { "Email" } },
             { "Registration", new[] { "ConfirmationEmail" } },
             { "RegistrationTemplate", new[] { "ConfirmationFromEmail", "ReminderFromEmail", "PaymentReminderFromEmail", "WaitListTransitionFromEmail" } },
-            { "ServiceJob", new[] { "NotificationEmails" } }
+            { "ServiceJob", new[] { "NotificationEmails" } },
+            { "SystemEmail", new[] { "From", "To" } }
         };
         private Dictionary<string, string[]> _scrubPhoneTables = new Dictionary<string, string[]>
         {
