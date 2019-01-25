@@ -19,20 +19,12 @@ namespace RockSweeper
         public CancellationToken? CancellationToken { get; set; }
 
         /// <summary>
-        /// Gets or sets the database connection.
+        /// Gets the database connection string.
         /// </summary>
         /// <value>
-        /// The database connection.
+        /// The database connection string.
         /// </value>
-        protected SqlConnection Connection { get; private set; }
-
-        /// <summary>
-        /// Gets or sets the transaction.
-        /// </summary>
-        /// <value>
-        /// The transaction.
-        /// </value>
-        public SqlTransaction Transaction { get; private set; }
+        protected string ConnectionString { get; private set; }
 
         /// <summary>
         /// Gets the rock web folder path.
@@ -117,11 +109,9 @@ namespace RockSweeper
         /// <param name="rockWeb">The rock web.</param>
         public SweeperController( string connectionString, string rockWeb )
         {
-            Connection = new SqlConnection( connectionString );
+            ConnectionString = connectionString;
             Domain = new RockDomain( rockWeb );
             RockWeb = rockWeb;
-
-            Connection.Open();
 
             var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
@@ -388,6 +378,19 @@ namespace RockSweeper
         #region SQL Methods
 
         /// <summary>
+        /// Gets the database connection.
+        /// </summary>
+        /// <returns></returns>
+        protected SqlConnection GetDatabaseConnection()
+        {
+            var connection = new SqlConnection( ConnectionString );
+
+            connection.Open();
+
+            return connection;
+        }
+
+        /// <summary>
         /// Executes a SQL scalar statement and returns the value.
         /// </summary>
         /// <typeparam name="T">The expected value type to be returned.</typeparam>
@@ -395,12 +398,14 @@ namespace RockSweeper
         /// <returns>The value that resulted from the statement.</returns>
         protected T SqlScalar<T>( string sql )
         {
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
+                using ( var command = connection.CreateCommand() )
+                {
+                    command.CommandText = sql;
 
-                return (T)command.ExecuteScalar();
+                    return ( T ) command.ExecuteScalar();
+                }
             }
         }
 
@@ -414,18 +419,20 @@ namespace RockSweeper
         {
             var list = new List<T>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
-                    {
-                        var c1 = reader.IsDBNull( 0 ) ? default( T ) : (T)reader[0];
+                    command.CommandText = sql;
 
-                        list.Add( c1 );
+                    using ( var reader = command.ExecuteReader() )
+                    {
+                        while ( reader.Read() )
+                        {
+                            var c1 = reader.IsDBNull( 0 ) ? default( T ) : ( T ) reader[0];
+
+                            list.Add( c1 );
+                        }
                     }
                 }
             }
@@ -444,19 +451,21 @@ namespace RockSweeper
         {
             var list = new List<Tuple<T1, T2>>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
-                    {
-                        var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : (T1)reader[0];
-                        var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : (T2)reader[1];
+                    command.CommandText = sql;
 
-                        list.Add( new Tuple<T1, T2>( c1, c2 ) );
+                    using ( var reader = command.ExecuteReader() )
+                    {
+                        while ( reader.Read() )
+                        {
+                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
+
+                            list.Add( new Tuple<T1, T2>( c1, c2 ) );
+                        }
                     }
                 }
             }
@@ -476,20 +485,22 @@ namespace RockSweeper
         {
             var list = new List<Tuple<T1, T2, T3>>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
-                    {
-                        var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : (T1)reader[0];
-                        var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : (T2)reader[1];
-                        var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : (T3)reader[2];
+                    command.CommandText = sql;
 
-                        list.Add( new Tuple<T1, T2, T3>( c1, c2, c3 ) );
+                    using ( var reader = command.ExecuteReader() )
+                    {
+                        while ( reader.Read() )
+                        {
+                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
+
+                            list.Add( new Tuple<T1, T2, T3>( c1, c2, c3 ) );
+                        }
                     }
                 }
             }
@@ -510,21 +521,23 @@ namespace RockSweeper
         {
             var list = new List<Tuple<T1, T2, T3, T4>>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
-                    {
-                        var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : (T1)reader[0];
-                        var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : (T2)reader[1];
-                        var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : (T3)reader[2];
-                        var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : (T4)reader[3];
+                    command.CommandText = sql;
 
-                        list.Add( new Tuple<T1, T2, T3, T4>( c1, c2, c3, c4 ) );
+                    using ( var reader = command.ExecuteReader() )
+                    {
+                        while ( reader.Read() )
+                        {
+                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
+                            var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : ( T4 ) reader[3];
+
+                            list.Add( new Tuple<T1, T2, T3, T4>( c1, c2, c3, c4 ) );
+                        }
                     }
                 }
             }
@@ -546,22 +559,24 @@ namespace RockSweeper
         {
             var list = new List<Tuple<T1, T2, T3, T4, T5>>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
-                    {
-                        var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : (T1)reader[0];
-                        var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : (T2)reader[1];
-                        var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : (T3)reader[2];
-                        var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : (T4)reader[3];
-                        var c5 = reader.IsDBNull( 4 ) ? default( T5 ) : (T5)reader[4];
+                    command.CommandText = sql;
 
-                        list.Add( new Tuple<T1, T2, T3, T4, T5>( c1, c2, c3, c4, c5 ) );
+                    using ( var reader = command.ExecuteReader() )
+                    {
+                        while ( reader.Read() )
+                        {
+                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
+                            var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : ( T4 ) reader[3];
+                            var c5 = reader.IsDBNull( 4 ) ? default( T5 ) : ( T5 ) reader[4];
+
+                            list.Add( new Tuple<T1, T2, T3, T4, T5>( c1, c2, c3, c4, c5 ) );
+                        }
                     }
                 }
             }
@@ -578,23 +593,25 @@ namespace RockSweeper
         {
             var list = new List<Dictionary<string, object>>();
 
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                using ( var reader = command.ExecuteReader() )
+                using ( var command = connection.CreateCommand() )
                 {
-                    while ( reader.Read() )
+                    command.CommandText = sql;
+
+                    using ( var reader = command.ExecuteReader() )
                     {
-                        var dictionary = new Dictionary<string, object>();
-
-                        for (int i = 0; i < reader.FieldCount; i++ )
+                        while ( reader.Read() )
                         {
-                            dictionary.Add( reader.GetName( i ), reader.IsDBNull( i ) ? null : reader[i] );
-                        }
+                            var dictionary = new Dictionary<string, object>();
 
-                        list.Add( dictionary );
+                            for ( int i = 0; i < reader.FieldCount; i++ )
+                            {
+                                dictionary.Add( reader.GetName( i ), reader.IsDBNull( i ) ? null : reader[i] );
+                            }
+
+                            list.Add( dictionary );
+                        }
                     }
                 }
             }
@@ -619,26 +636,28 @@ namespace RockSweeper
         /// <returns>The number of rows affected.</returns>
         protected int SqlCommand( string sql, Dictionary<string, object> parameters )
         {
-            using ( var command = Connection.CreateCommand() )
+            using ( var connection = GetDatabaseConnection() )
             {
-                command.Transaction = Transaction;
-                command.CommandText = sql;
-
-                if ( parameters != null )
+                using ( var command = connection.CreateCommand() )
                 {
-                    foreach ( var p in parameters )
+                    command.CommandText = sql;
+
+                    if ( parameters != null )
                     {
-                        command.Parameters.AddWithValue( p.Key, p.Value ?? DBNull.Value );
+                        foreach ( var p in parameters )
+                        {
+                            command.Parameters.AddWithValue( p.Key, p.Value ?? DBNull.Value );
+                        }
                     }
-                }
 
-                try
-                {
-                    return command.ExecuteNonQuery();
-                }
-                catch
-                {
-                    return 0;
+                    try
+                    {
+                        return command.ExecuteNonQuery();
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
                 }
             }
         }
