@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using RockSweeper.Utility;
 
 namespace RockSweeper
@@ -197,111 +198,144 @@ namespace RockSweeper
         public void InsertHistoryPlaceholders()
         {
             int totalCount = SqlScalar<int>( "SELECT COUNT(*) FROM [History]" );
-            int rowCount = 0;
+            int chunkSize = 2500;
+            int nextOffset = 0;
+            int processedRows = 0;
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
             var loginFieldValueRegex = new Regex( "(.*logged in.*<span class=['\"]field-name['\"]>)([^<]*)(<\\/span>)" );
 
-            var histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
-
-            while ( histories.Any() )
+            void ProcessChunk()
             {
-                for ( int i = 0; i < histories.Count; i++ )
+                int offset = 0;
+
+                lock ( this )
                 {
-                    var changes = new Dictionary<string, object>();
-                    var history = histories[i];
+                    offset = nextOffset;
+                    nextOffset += chunkSize;
+                }
 
-                    //
-                    // Scrub the Caption.
-                    //
-                    var caption = ( string ) history["Caption"];
-                    if ( !string.IsNullOrWhiteSpace( caption ) )
+                var histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
+
+                while ( histories.Any() )
+                {
+                    for ( int i = 0; i < histories.Count; i++ )
                     {
-                        changes.Add( "Caption", string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) ) );
-                    }
+                        var changes = new Dictionary<string, object>();
+                        var history = histories[i];
 
-                    //
-                    // Scrub the Summary.
-                    //
-                    var summary = ( string ) history["Summary"];
-                    if ( !string.IsNullOrWhiteSpace( summary ) )
-                    {
-                        var newValue = fieldValueRegex.Replace( summary, ( m ) =>
+                        //
+                        // Scrub the Caption.
+                        //
+                        var caption = ( string ) history["Caption"];
+                        if ( !string.IsNullOrWhiteSpace( caption ) )
                         {
-                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                        } );
-
-                        newValue = loginFieldValueRegex.Replace( newValue, ( m ) =>
-                        {
-                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                        } );
-
-                        if ( newValue != summary )
-                        {
-                            changes.Add( "Summary", newValue );
+                            changes.Add( "Caption", string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) ) );
                         }
-                    }
 
-                    //
-                    // Scrub the RelatedData to remove any mentions of the original values.
-                    //
-                    var relatedData = ( string ) history["RelatedData"];
-                    if ( !string.IsNullOrWhiteSpace( relatedData ) )
-                    {
-                        var newValue = fieldValueRegex.Replace( relatedData, ( m ) =>
+                        //
+                        // Scrub the Summary.
+                        //
+                        var summary = ( string ) history["Summary"];
+                        if ( !string.IsNullOrWhiteSpace( summary ) )
                         {
-                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                        } );
+                            var newValue = fieldValueRegex.Replace( summary, ( m ) =>
+                            {
+                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                            } );
 
-                        if ( newValue != relatedData )
-                        {
-                            changes.Add( "RelatedData", newValue );
+                            newValue = loginFieldValueRegex.Replace( newValue, ( m ) =>
+                            {
+                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                            } );
+
+                            if ( newValue != summary )
+                            {
+                                changes.Add( "Summary", newValue );
+                            }
                         }
-                    }
 
-                    //
-                    // Scrub the OldValue.
-                    //
-                    if ( history.ContainsKey( "OldValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["OldValue"] ) )
-                    {
-                        changes.Add( "OldValue", "HIDDEN" );
-                    }
+                        //
+                        // Scrub the RelatedData to remove any mentions of the original values.
+                        //
+                        var relatedData = ( string ) history["RelatedData"];
+                        if ( !string.IsNullOrWhiteSpace( relatedData ) )
+                        {
+                            var newValue = fieldValueRegex.Replace( relatedData, ( m ) =>
+                            {
+                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                            } );
 
-                    //
-                    // Scrub the NewValue.
-                    //
-                    if ( history.ContainsKey( "NewValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["NewValue"] ) )
-                    {
-                        changes.Add( "NewValue", "HIDDEN" );
-                    }
+                            if ( newValue != relatedData )
+                            {
+                                changes.Add( "RelatedData", newValue );
+                            }
+                        }
 
-                    //
-                    // Scrub the ValueName.
-                    //
-                    var verb = ( string ) history["Verb"];
-                    if ( verb == "ADDEDTOGROUP" || verb == "REMOVEDROMGROUP" || verb == "REGISTERED" || verb == "MERGE" )
-                    {
-                        changes.Add( "ValueName", "HIDDEN" );
-                    }
-                    else if ( verb == "LOGIN" && history.ContainsKey( "ValueName" ) )
-                    {
-                        var valueName = ( string ) history["ValueName"];
-                        if ( !string.IsNullOrWhiteSpace( valueName ) && valueName.StartsWith( "fakeuser" ) )
+                        //
+                        // Scrub the OldValue.
+                        //
+                        if ( history.ContainsKey( "OldValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["OldValue"] ) )
+                        {
+                            changes.Add( "OldValue", "HIDDEN" );
+                        }
+
+                        //
+                        // Scrub the NewValue.
+                        //
+                        if ( history.ContainsKey( "NewValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["NewValue"] ) )
+                        {
+                            changes.Add( "NewValue", "HIDDEN" );
+                        }
+
+                        //
+                        // Scrub the ValueName.
+                        //
+                        var verb = ( string ) history["Verb"];
+                        if ( verb == "ADDEDTOGROUP" || verb == "REMOVEDROMGROUP" || verb == "REGISTERED" || verb == "MERGE" )
                         {
                             changes.Add( "ValueName", "HIDDEN" );
                         }
+                        else if ( verb == "LOGIN" && history.ContainsKey( "ValueName" ) )
+                        {
+                            var valueName = ( string ) history["ValueName"];
+                            if ( !string.IsNullOrWhiteSpace( valueName ) && valueName.StartsWith( "fakeuser" ) )
+                            {
+                                changes.Add( "ValueName", "HIDDEN" );
+                            }
+                        }
+
+                        if ( changes.Any() )
+                        {
+                            UpdateDatabaseRecord( "History", ( int ) history["Id"], changes );
+                        }
+
+                        CancellationToken?.ThrowIfCancellationRequested();
                     }
 
-                    if ( changes.Any() )
+                    lock ( this )
                     {
-                        UpdateDatabaseRecord( "History", ( int ) history["Id"], changes );
+                        processedRows += histories.Count;
+                        Progress( processedRows / ( double ) totalCount );
+
+                        offset = nextOffset;
+                        nextOffset += chunkSize;
                     }
+
+                    histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
                 }
+            }
 
-                rowCount += histories.Count;
+            var tasks = new List<System.Threading.Tasks.Task>();
+            for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
+            {
+                var task = new System.Threading.Tasks.Task( ProcessChunk );
+                tasks.Add( task );
+                task.Start();
+            }
 
-                Progress( rowCount / ( double ) totalCount );
-
-                histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
+            while ( !tasks.Any( t => t.IsCompleted ) )
+            {
+                Thread.Sleep( 100 );
             }
         }
 

@@ -1004,10 +1004,7 @@ ELSE
                     {
                         processedRows += rows.Count;
                         Progress( processedRows / ( double ) totalCount, step, stepCount );
-                    }
 
-                    lock ( this )
-                    {
                         offset = nextOffset;
                         nextOffset += chunkSize;
                     }
