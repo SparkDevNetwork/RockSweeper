@@ -1262,5 +1262,14 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 Progress( i / ( double ) geoLocations.Count, 3, stepCount );
             }
         }
+
+        /// <summary>
+        /// Empties the saved account data.
+        /// </summary>
+        public void EmptySavedAccountTables()
+        {
+            SqlCommand( "TRUNCATE TABLE [FinancialPersonBankAccount]" );
+            SqlCommand( "TRUNCATE TABLE [FinancialPersonSavedAccount]" );
+        }
     }
 }

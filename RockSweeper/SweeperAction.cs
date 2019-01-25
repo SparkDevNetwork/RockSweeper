@@ -264,6 +264,11 @@ namespace RockSweeper
         [Category( "Data Scrubbing" )]
         GenerateRandomLocationAddresses,
 
+        [Title( "Empty Saved Account Tables" )]
+        [Description( "Clears the saved bank account and saved CC account tables.")]
+        [Category( "Data Scrubbing" )]
+        EmptySavedAccountTables,
+
         #endregion
     }
 }
