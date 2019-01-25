@@ -333,9 +333,14 @@ namespace RockSweeper
                 task.Start();
             }
 
-            while ( !tasks.Any( t => t.IsCompleted ) )
+            while ( tasks.Any( t => !t.IsCompleted ) )
             {
                 Thread.Sleep( 100 );
+            }
+
+            if ( tasks.Any( t => t.IsFaulted ) )
+            {
+                throw tasks.First( t => t.IsFaulted ).Exception.InnerException;
             }
         }
 
