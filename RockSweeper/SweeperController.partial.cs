@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
@@ -56,7 +57,7 @@ namespace RockSweeper
         /// <value>
         /// The map of original e-mail addresses to new scrubbed e-mail addresses.
         /// </value>
-        protected Dictionary<string, string> EmailMap { get; private set; }
+        private ConcurrentDictionary<string, string> EmailMap { get; set; }
 
         /// <summary>
         /// Gets the phone map.
@@ -64,7 +65,7 @@ namespace RockSweeper
         /// <value>
         /// The phone map.
         /// </value>
-        protected Dictionary<string, string> PhoneMap { get; private set; }
+        private ConcurrentDictionary<string, string> PhoneMap { get; set; }
 
         /// <summary>
         /// Gets the map of original login names to new scrubbed login names.
@@ -72,7 +73,7 @@ namespace RockSweeper
         /// <value>
         /// The map of original login names to new scrubbed login names.
         /// </value>
-        protected Dictionary<string, string> LoginMap { get; private set; }
+        private ConcurrentDictionary<string, string> LoginMap { get; set; }
 
         /// <summary>
         /// Gets the faker object that will help generate fake data.
@@ -88,7 +89,7 @@ namespace RockSweeper
         /// <value>
         /// The geo lookup cache.
         /// </value>
-        protected Dictionary<string, Address> GeoLookupCache { get; private set; }
+        protected ConcurrentDictionary<string, Address> GeoLookupCache { get; private set; }
 
         /// <summary>
         /// Gets the geo lookup count.
@@ -116,11 +117,11 @@ namespace RockSweeper
             var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
             GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
 
-            EmailMap = new Dictionary<string, string>();
-            PhoneMap = new Dictionary<string, string>();
-            LoginMap = new Dictionary<string, string>();
+            EmailMap = new ConcurrentDictionary<string, string>();
+            PhoneMap = new ConcurrentDictionary<string, string>();
+            LoginMap = new ConcurrentDictionary<string, string>();
 
-            GeoLookupCache = Support.LoadGeocodeCache();
+            GeoLookupCache = new ConcurrentDictionary<string, Address>( Support.LoadGeocodeCache() );
 
             SetupDataFaker();
         }
@@ -130,7 +131,7 @@ namespace RockSweeper
         /// </summary>
         public void Dispose()
         {
-            Support.SaveGeocodeCache( GeoLookupCache );
+            Support.SaveGeocodeCache( GeoLookupCache.ToDictionary( kvp => kvp.Key, kvp => kvp.Value ) );
         }
 
         #endregion
@@ -194,23 +195,21 @@ namespace RockSweeper
         /// <returns></returns>
         protected string GenerateFakeEmailAddressForAddress( string originalEmail )
         {
-            if ( EmailMap.ContainsKey( originalEmail.ToLower() ) )
+            string email = EmailMap.GetOrAdd( originalEmail.ToLower(), ( key ) =>
             {
-                return EmailMap[originalEmail.ToLower()];
-            }
+                lock ( EmailMap )
+                {
+                    if ( originalEmail.Contains( "@" ) )
+                    {
+                        return $"user{ EmailMap.Count + 1 }@fakeinbox.com";
+                    }
+                    else
+                    {
+                        return $"user{ EmailMap.Count + 1 }";
+                    }
+                }
+            } );
 
-            string email;
-
-            if ( originalEmail.Contains( "@" ) )
-            {
-                email = $"user{ EmailMap.Count + 1 }@fakeinbox.com";
-            }
-            else
-            {
-                email = $"user{ EmailMap.Count + 1 }";
-            }
-
-            EmailMap.Add( originalEmail.ToLower(), email );
 
             return email;
         }
@@ -222,14 +221,13 @@ namespace RockSweeper
         /// <returns></returns>
         protected string GenerateFakeLoginForLogin( string originalLogin )
         {
-            if ( LoginMap.ContainsKey( originalLogin.ToLower() ) )
+            string login = LoginMap.GetOrAdd( originalLogin.ToLower(), ( key ) =>
             {
-                return LoginMap[originalLogin.ToLower()];
-            }
-
-            string login = $"fakeuser{ LoginMap.Count + 1 }";
-
-            LoginMap.Add( originalLogin.ToLower(), login );
+                lock ( LoginMap )
+                {
+                    return $"fakeuser{ LoginMap.Count + 1 }";
+                }
+            } );
 
             return login;
         }
@@ -243,7 +241,7 @@ namespace RockSweeper
         {
             var originalPhoneDigits = new string( originalPhone.Where( c => char.IsDigit( c ) ).ToArray() );
 
-            if ( !PhoneMap.ContainsKey( originalPhoneDigits ) )
+            var newPhoneDigits = PhoneMap.GetOrAdd( originalPhoneDigits, ( key ) =>
             {
                 if ( originalPhoneDigits.Length == 7 || originalPhoneDigits.Length == 10 || originalPhoneDigits.Length == 11 )
                 {
@@ -283,17 +281,15 @@ namespace RockSweeper
 
                     number = number + DataFaker.Random.Replace( "####" );
 
-                    PhoneMap.Add( originalPhoneDigits, number );
+                    return number;
                 }
                 else
                 {
                     string format = string.Join( "", Enumerable.Repeat( "#", originalPhoneDigits.Length ) );
-                    PhoneMap.Add( originalPhoneDigits, DataFaker.Random.Replace( format ) );
+                    return DataFaker.Random.Replace( format );
                 }
+            } );
 
-            }
-
-            var newPhoneDigits = PhoneMap[originalPhoneDigits];
             var newPhone = originalPhone.Select( c => c ).ToArray();
             int digits = 0;
 
@@ -315,59 +311,61 @@ namespace RockSweeper
         /// <returns></returns>
         protected Address GetBestAddressForCoordinates( Coordinates coordinates )
         {
-            Address address;
-
-            if ( GeoLookupCache.ContainsKey( coordinates.ToString() ) )
+            Address address = GeoLookupCache.GetOrAdd( coordinates.ToString(), ( key ) =>
             {
-                return GeoLookupCache[coordinates.ToString()];
-            }
+                var client = new RestSharp.RestClient( "https://reverse.geocoder.api.here.com/6.2" );
+                var req = new RestSharp.RestRequest( "reversegeocode.json" );
+                req.AddParameter( "prox", coordinates.ToString() );
+                req.AddParameter( "mode", "retrieveAddresses" );
+                req.AddParameter( "maxresults", 1 );
+                req.AddParameter( "app_id", Properties.Settings.Default.HereAppId );
+                req.AddParameter( "app_code", Properties.Settings.Default.HereAppCode );
 
-            var client = new RestSharp.RestClient( "https://reverse.geocoder.api.here.com/6.2" );
-            var req = new RestSharp.RestRequest( "reversegeocode.json" );
-            req.AddParameter( "prox", coordinates.ToString() );
-            req.AddParameter( "mode", "retrieveAddresses" );
-            req.AddParameter( "maxresults", 1 );
-            req.AddParameter( "app_id", Properties.Settings.Default.HereAppId );
-            req.AddParameter( "app_code", Properties.Settings.Default.HereAppCode );
+                var resp = client.Execute<HereRestApi.ApiResponse<HereRestApi.LocationResult>>( req );
 
-            var resp = client.Execute<HereRestApi.ApiResponse<HereRestApi.LocationResult>>( req );
-
-            if ( !resp.Data.Response.View.Any() || !resp.Data.Response.View.First().Result.Any() )
-            {
-                address = new Address
+                lock ( GeoLookupCache )
                 {
-                    Street1 = DataFaker.Address.StreetAddress(),
-                    City = DataFaker.Address.City(),
-                    State = DataFaker.Address.State(),
-                    County = DataFaker.Address.County(),
-                    PostalCode = DataFaker.Address.ZipCode(),
-                    Country = "US"
-                };
-            }
-            else
-            {
-                var location = resp.Data.Response.View.First().Result.First().Location;
-                address = new Address
-                {
-                    Street1 = $"{ location.Address.HouseNumber } { location.Address.Street }",
-                    City = location.Address.City,
-                    State = location.Address.State,
-                    County = location.Address.County,
-                    PostalCode = location.Address.PostalCode,
-                    Country = location.Address.Country.Substring( 0, 2 )
-                };
-            }
+                    GeoLookupCount += 1;
+                }
 
-            GeoLookupCache.Add( coordinates.ToString(), address );
+                if ( !resp.Data.Response.View.Any() || !resp.Data.Response.View.First().Result.Any() )
+                {
+                    return new Address
+                    {
+                        Street1 = DataFaker.Address.StreetAddress(),
+                        City = DataFaker.Address.City(),
+                        State = DataFaker.Address.State(),
+                        County = DataFaker.Address.County(),
+                        PostalCode = DataFaker.Address.ZipCode(),
+                        Country = "US"
+                    };
+                }
+                else
+                {
+                    var location = resp.Data.Response.View.First().Result.First().Location;
+
+                    return new Address
+                    {
+                        Street1 = $"{ location.Address.HouseNumber } { location.Address.Street }",
+                        City = location.Address.City,
+                        State = location.Address.State,
+                        County = location.Address.County,
+                        PostalCode = location.Address.PostalCode,
+                        Country = location.Address.Country.Substring( 0, 2 )
+                    };
+                }
+            } );
 
             //
             // Save the cache every 100 lookups. That way, if there is a crash, we don't lose everything.
             //
-            GeoLookupCount += 1;
-            if ( GeoLookupCount > 100 )
+            lock ( GeoLookupCache )
             {
-                Support.SaveGeocodeCache( GeoLookupCache );
-                GeoLookupCount = 0;
+                if ( GeoLookupCount > 100 )
+                {
+                    Support.SaveGeocodeCache( GeoLookupCache.ToDictionary( kvp => kvp.Key, kvp => kvp.Value ) );
+                    GeoLookupCount = 0;
+                }
             }
 
             return address;
