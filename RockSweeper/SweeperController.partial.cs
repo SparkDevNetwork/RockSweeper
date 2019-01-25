@@ -954,42 +954,78 @@ ELSE
         protected void ScrubTableTextColumns( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, int? step, int? stepCount )
         {
             string columns = string.Join( "], [", columnNames );
-            int rowCount = 0;
+            int processedRows = 0;
+            int nextOffset = 0;
+            int chunkSize = 1000;
             int totalCount = SqlScalar<int>( $"SELECT COUNT(*) FROM [{ tableName }]" );
-            var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
 
-            while ( rows.Count > 0 )
+            void ProcessChunk()
             {
-                for ( int i = 0; i < rows.Count; i++ )
+                int offset = 0;
+
+                lock ( this )
                 {
-                    int valueId = ( int ) rows[i]["Id"];
-                    var updatedValues = new Dictionary<string, object>();
+                    offset = nextOffset;
+                    nextOffset += chunkSize;
+                }
+                var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
 
-                    foreach ( var c in columnNames )
+                while ( rows.Count > 0 )
+                {
+                    for ( int i = 0; i < rows.Count; i++ )
                     {
-                        var value = ( string ) rows[i][c];
+                        int valueId = ( int ) rows[i]["Id"];
+                        var updatedValues = new Dictionary<string, object>();
 
-                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        foreach ( var c in columnNames )
                         {
-                            var newValue = replacement( value );
+                            var value = ( string ) rows[i][c];
 
-                            if ( value != newValue )
+                            if ( !string.IsNullOrWhiteSpace( value ) )
                             {
-                                updatedValues.Add( c, newValue );
+                                var newValue = replacement( value );
+
+                                if ( value != newValue )
+                                {
+                                    updatedValues.Add( c, newValue );
+                                }
                             }
                         }
+
+                        if ( updatedValues.Any() )
+                        {
+                            UpdateDatabaseRecord( tableName, valueId, updatedValues );
+                        }
+
+                        CancellationToken?.ThrowIfCancellationRequested();
                     }
 
-                    if ( updatedValues.Any() )
+                    lock ( this )
                     {
-                        UpdateDatabaseRecord( tableName, valueId, updatedValues );
+                        processedRows += rows.Count;
+                        Progress( processedRows / ( double ) totalCount, step, stepCount );
                     }
 
-                    Progress( ( rowCount + i ) / ( double ) totalCount, step, stepCount );
+                    lock ( this )
+                    {
+                        offset = nextOffset;
+                        nextOffset += chunkSize;
+                    }
+                    rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
                 }
+            }
 
-                rowCount += rows.Count;
-                rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { rowCount } ROWS FETCH NEXT 1000 ROWS ONLY" );
+            var tasks = new List<System.Threading.Tasks.Task>();
+            for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
+            {
+                var task = new System.Threading.Tasks.Task( ProcessChunk );
+                tasks.Add( task );
+                task.Start();
+            }
+
+            while ( !tasks.Any( t => t.IsCompleted ) )
+            {
+                Thread.Sleep( 100 );
             }
         }
 

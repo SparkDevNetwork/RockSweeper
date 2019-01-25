@@ -216,7 +216,7 @@ namespace RockSweeper
                     var caption = ( string ) history["Caption"];
                     if ( !string.IsNullOrWhiteSpace( caption ) )
                     {
-                        changes.Add( "Caption", string.Join( " ", DataFaker.Lorem.Words( caption.Split( ',' ).Length ) ) );
+                        changes.Add( "Caption", string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) ) );
                     }
 
                     //
