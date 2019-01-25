@@ -23,12 +23,36 @@ namespace RockSweeper
 
         #region Properties
 
+        /// <summary>
+        /// Gets or sets the sweeper.
+        /// </summary>
+        /// <value>
+        /// The sweeper.
+        /// </value>
         protected SweeperController Sweeper { get; set; }
 
+        /// <summary>
+        /// Gets or sets the domain.
+        /// </summary>
+        /// <value>
+        /// The domain.
+        /// </value>
         protected RockDomain Domain { get; set; }
 
-        protected string ConnectionString { get; set; } = "Data Source=localhost;Initial Catalog=RockObs;Integrated Security=True";
+        /// <summary>
+        /// Gets or sets the connection string.
+        /// </summary>
+        /// <value>
+        /// The connection string.
+        /// </value>
+        protected string ConnectionString { get; set; }
 
+        /// <summary>
+        /// Gets the name of the SQL database.
+        /// </summary>
+        /// <value>
+        /// The name of the SQL database.
+        /// </value>
         public string SqlDatabaseName
         {
             get => _sqlDatabaseName;
@@ -39,8 +63,14 @@ namespace RockSweeper
                 NotifyPropertyChanged( "CanStart" );
             }
         }
-        private string _sqlDatabaseName = "localhost\\RockObs";
+        private string _sqlDatabaseName;
 
+        /// <summary>
+        /// Gets the rock web folder.
+        /// </summary>
+        /// <value>
+        /// The rock web folder.
+        /// </value>
         public string RockWebFolder
         {
             get => _rockWebFolder;
@@ -51,8 +81,14 @@ namespace RockSweeper
                 NotifyPropertyChanged( "CanStart" );
             }
         }
-        private string _rockWebFolder = "C:\\Users\\Daniel Hazelbaker\\Desktop\\Rockit\\RockWeb";
+        private string _rockWebFolder;
 
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is running.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is running; otherwise, <c>false</c>.
+        /// </value>
         public bool IsRunning
         {
             get
@@ -65,10 +101,17 @@ namespace RockSweeper
                 NotifyPropertyChanged( "IsRunning" );
                 NotifyPropertyChanged( "CanStart" );
                 NotifyPropertyChanged( "CanConfigure" );
+                NotifyPropertyChanged( "CanStop" );
             }
         }
         private bool _isRunning;
 
+        /// <summary>
+        /// Gets a value indicating whether this instance can configure.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance can configure; otherwise, <c>false</c>.
+        /// </value>
         public bool CanConfigure
         {
             get
@@ -77,6 +120,12 @@ namespace RockSweeper
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance can start.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance can start; otherwise, <c>false</c>.
+        /// </value>
         public bool CanStart
         {
             get
@@ -90,6 +139,26 @@ namespace RockSweeper
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance can stop.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance can stop; otherwise, <c>false</c>.
+        /// </value>
+        public bool CanStop
+        {
+            get
+            {
+                return CancellationTokenSource != null;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the status bar text.
+        /// </summary>
+        /// <value>
+        /// The status bar text.
+        /// </value>
         public string StatusBarText
         {
             get => _statusBarText;
@@ -117,7 +186,21 @@ namespace RockSweeper
         /// </value>
         public ObservableCollection<SweeperOption> ConfigOptions { get; } = new ObservableCollection<SweeperOption>();
 
+        /// <summary>
+        /// Gets or sets the enabled options.
+        /// </summary>
+        /// <value>
+        /// The enabled options.
+        /// </value>
         public List<SweeperOption> EnabledOptions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the cancellation token source.
+        /// </summary>
+        /// <value>
+        /// The cancellation token source.
+        /// </value>
+        protected CancellationTokenSource CancellationTokenSource { get; set; }
 
         #endregion
 
@@ -163,7 +246,6 @@ namespace RockSweeper
         /// <exception cref="Exception">Unknown sweep type</exception>
         protected void ThreadSweep()
         {
-            var cancellationTokenSource = new CancellationTokenSource();
             SweeperOption option = null;
             ProgressLine progressLine = null;
 
@@ -171,7 +253,7 @@ namespace RockSweeper
             {
                 StatusBarText = $"{ option.Title } { text }";
             };
-            Sweeper.CancellationToken = cancellationTokenSource.Token;
+            Sweeper.CancellationToken = CancellationTokenSource.Token;
 
             for ( int i = 0; i < EnabledOptions.Count; i++ )
             {
@@ -196,6 +278,8 @@ namespace RockSweeper
 
                     methodInfo.Invoke( Sweeper, new object[] { } );
 
+                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                     Dispatcher.Invoke( () =>
                     {
                         progressLine.Progress = null;
@@ -208,6 +292,8 @@ namespace RockSweeper
 
                     Sweeper.Dispose();
                     Sweeper = null;
+                    CancellationTokenSource = null;
+                    IsRunning = false;
 
                     Dispatcher.Invoke( () =>
                     {
@@ -223,6 +309,8 @@ namespace RockSweeper
 
             Sweeper.Dispose();
             Sweeper = null;
+            CancellationTokenSource = null;
+            IsRunning = false;
 
             Dispatcher.Invoke( () =>
             {
@@ -233,6 +321,19 @@ namespace RockSweeper
         #endregion
 
         #region Event Handlers
+
+        /// <summary>
+        /// Handles the Closing event of the Window control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="System.ComponentModel.CancelEventArgs"/> instance containing the event data.</param>
+        protected void Window_Closing( object sender, CancelEventArgs e )
+        {
+            if ( IsRunning )
+            {
+                e.Cancel = true;
+            }
+        }
 
         /// <summary>
         /// Handles the Click event of the Preferences control.
@@ -309,8 +410,21 @@ namespace RockSweeper
             dgOptions.Visibility = Visibility.Hidden;
             dgProgress.Visibility = Visibility.Visible;
 
+            CancellationTokenSource = new CancellationTokenSource();
             IsRunning = true;
+
             new Thread( ThreadSweep ).Start();
+        }
+
+        /// <summary>
+        /// Handles the Click event of the Stop control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
+        protected void Stop_Click( object sender, RoutedEventArgs e )
+        {
+            CancellationTokenSource.Cancel();
+            IsRunning = false;
         }
 
         /// <summary>

@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:RockSweeper"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
+        Closing="Window_Closing"
         Title="MainWindow" Height="450" Width="800">
     <DockPanel LastChildFill="True">
         <ToolBarTray DockPanel.Dock="Top" IsLocked="True">
@@ -18,6 +19,7 @@
                 <Button Content="Open Database" Click="OpenDatabase_Click" IsEnabled="{Binding CanConfigure}" />
                 <Button Content="Select Rock Folder" Click="SelectRockFolder_Click" IsEnabled="{Binding CanConfigure}" />
                 <Button Content="Start" Click="Start_Click" IsEnabled="{Binding CanStart}" />
+                <Button Content="Stop" Click="Stop_Click" IsEnabled="{Binding CanStop}" />
             </ToolBar>
         </ToolBarTray>
 
