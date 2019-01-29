@@ -229,7 +229,14 @@ namespace RockSweeper
                         var caption = ( string ) history["Caption"];
                         if ( !string.IsNullOrWhiteSpace( caption ) )
                         {
-                            changes.Add( "Caption", string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) ) );
+                            var value = string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) );
+
+                            if ( value.Length > 200 )
+                            {
+                                value = value.Substring( 0, 200 );
+                            }
+
+                            changes.Add( "Caption", value );
                         }
 
                         //
