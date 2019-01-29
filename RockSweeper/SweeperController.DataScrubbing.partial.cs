@@ -1151,6 +1151,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             // Step 2: Move all locations with a valid GeoPoint inside our radius.
             //
             var geoLocations = SqlQuery( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) < { radiusDistance }" );
+            var step2Changes = new Dictionary<string, object>();
             for ( int i = 0; i < geoLocations.Count; i++ )
             {
                 var locationId = ( int ) geoLocations[i]["Id"];
@@ -1163,7 +1164,9 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 var postalCode = ( string ) geoLocations[i]["PostalCode"];
                 var state = ( string ) geoLocations[i]["State"];
                 var country = ( string ) geoLocations[i]["Country"];
-                var changes = new Dictionary<string, object>();
+
+                CancellationToken?.ThrowIfCancellationRequested();
+                step2Changes.Clear();
 
                 var coordinates = new Coordinates( latitude, longitude ).CoordinatesByAdjusting( adjustCoordinates.Latitude, adjustCoordinates.Longitude );
 
@@ -1177,39 +1180,39 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
 
                 var address = GetBestAddressForCoordinates( coordinates );
 
-                changes.Add( "GeoPoint", coordinates );
+                step2Changes.Add( "GeoPoint", coordinates );
 
                 if ( !string.IsNullOrWhiteSpace( street1 ) )
                 {
-                    changes.Add( "Street1", address.Street1 );
+                    step2Changes.Add( "Street1", address.Street1 );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( city ) )
                 {
-                    changes.Add( "City", address.City );
+                    step2Changes.Add( "City", address.City );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( county ) )
                 {
-                    changes.Add( "County", address.Country );
+                    step2Changes.Add( "County", address.Country );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( postalCode ) )
                 {
-                    changes.Add( "PostalCode", address.PostalCode );
+                    step2Changes.Add( "PostalCode", address.PostalCode );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( state ) )
                 {
-                    changes.Add( "State", address.State );
+                    step2Changes.Add( "State", address.State );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( country ) )
                 {
-                    changes.Add( "Country", address.Country );
+                    step2Changes.Add( "Country", address.Country );
                 }
 
-                UpdateDatabaseRecord( "Location", locationId, changes );
+                UpdateDatabaseRecord( "Location", locationId, step2Changes );
 
                 Progress( i / ( double ) geoLocations.Count, 2, stepCount );
             }
