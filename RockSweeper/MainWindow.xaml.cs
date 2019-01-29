@@ -288,8 +288,6 @@ namespace RockSweeper
                 }
                 catch ( Exception e )
                 {
-                    StatusBarText = string.Empty;
-
                     Sweeper.Dispose();
                     Sweeper = null;
                     CancellationTokenSource = null;
@@ -300,6 +298,8 @@ namespace RockSweeper
                         progressLine.State = ProgressLineState.Failed;
                         MessageBox.Show( this, e.Message, "Error while processing" );
                     } );
+
+                    StatusBarText = string.Empty;
 
                     return;
                 }
