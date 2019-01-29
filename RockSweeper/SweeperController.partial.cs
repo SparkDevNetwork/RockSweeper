@@ -648,14 +648,7 @@ namespace RockSweeper
                         }
                     }
 
-                    try
-                    {
-                        return command.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        return 0;
-                    }
+                    return command.ExecuteNonQuery();
                 }
             }
         }
