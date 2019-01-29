@@ -744,11 +744,14 @@ WHERE AV.EntityId = 0
         {
             var entityTypeId = GetEntityTypeId( componentType );
 
-            SqlCommand( $@"DELETE AV
+            if ( entityTypeId.HasValue )
+            {
+                SqlCommand( $@"DELETE AV
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 WHERE AV.EntityId = 0
-  AND A.[EntityTypeId] = { entityTypeId }" );
+  AND A.[EntityTypeId] = { entityTypeId.Value }" );
+            }
         }
 
         /// <summary>
