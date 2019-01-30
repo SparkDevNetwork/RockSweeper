@@ -17,6 +17,7 @@ namespace RockSweeper
             { "BenevolenceRequest", new[] { "RequestText", "ResultSummary" } },
             { "Communication", new[] { "Message" } },
             { "Note", new[] { "Text" } },
+            { "DefinedValue", new[] { "Value", "Description" } },
             { "HtmlContent", new[] { "Content" } },
             { "Group", new[] { "Description" } }
         };
