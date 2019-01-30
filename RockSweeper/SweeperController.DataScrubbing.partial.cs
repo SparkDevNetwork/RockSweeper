@@ -976,6 +976,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             string organizationCity = DataFaker.Address.City();
 
             SetGlobalAttributeValue( "OrganizationName", $"{ organizationCity } Community Church" );
+            SetGlobalAttributeValue( "OrganizationAbbreviation", $"{ organizationCity } Community Church" );
             SetGlobalAttributeValue( "OrganizationWebsite", $"http://www.{ organizationCity.Replace( " ", "" ).ToLower() }communitychurch.org/" );
 
             var campuses = SqlQuery<int, string, string>( "SELECT [Id], [Url], [Description] FROM [Campus]" );
