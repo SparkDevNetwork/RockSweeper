@@ -9,9 +9,29 @@ namespace RockSweeper
 {
     public partial class SweeperController
     {
+        #region Regular Expressions
+
+        /// <summary>
+        /// The regular expression to use when scanning for e-mail addresses in text.
+        /// </summary>
         private Regex _scrubEmailRegex = new Regex( @"^\w+@([a-zA-Z_]+?\.)+?[a-zA-Z]{2,}$" );
+
+        /// <summary>
+        /// The regular expression to use when scanning for phone numbers. This is
+        /// complex, but it should catch various forms of phone numbers, such as:
+        /// 1 (555) 555-5555
+        /// 555.555.5555
+        /// 15555555555
+        /// </summary>
         private Regex _scrubPhoneRegex = new Regex( @"(^|\D)((1?[2-9][0-9]{2}[2-9][0-9]{2}[0-9]{4}|(1 ?)?\([2-9][0-9]{2}\) ?[2-9][0-9]{2}\-[0-9]{4}|(1[\-\.])?([2-9][0-9]{2}[\-\.])?[2-9][0-9]{2}[\-\.][0-9]{4}|(1 )?[2-9][0-9]{2} [2-9][0-9]{2} [0-9]{4}))($|\D)", RegexOptions.Multiline );
 
+        #endregion
+
+        #region Scrubbed Tables
+
+        /// <summary>
+        /// The common tables that are scrubbed by various means.
+        /// </summary>
         private Dictionary<string, string[]> _scrubCommonTables = new Dictionary<string, string[]>
         {
             { "BenevolenceRequest", new[] { "RequestText", "ResultSummary" } },
@@ -21,6 +41,10 @@ namespace RockSweeper
             { "HtmlContent", new[] { "Content" } },
             { "Group", new[] { "Description" } }
         };
+
+        /// <summary>
+        /// The tables that are scrubbed for e-mail addresses in addition to the common tables.
+        /// </summary>
         private Dictionary<string, string[]> _scrubEmailTables = new Dictionary<string, string[]>
         {
             { "BenevolenceRequest", new[] { "Email" } },
@@ -33,6 +57,10 @@ namespace RockSweeper
             { "ServiceJob", new[] { "NotificationEmails" } },
             { "SystemEmail", new[] { "From", "To" } }
         };
+
+        /// <summary>
+        /// The tables that are scrubbed for phone numbers in addition to the common tables.
+        /// </summary>
         private Dictionary<string, string[]> _scrubPhoneTables = new Dictionary<string, string[]>
         {
             { "RegistrationInstance", new[] { "ContactPhone" } },
@@ -40,6 +68,8 @@ namespace RockSweeper
             { "BenevolenceRequest", new[] { "HomePhoneNumber", "CellPhoneNumber", "WorkPhoneNumber" } },
             { "Campus", new[] { "PhoneNumber" } }
         };
+
+        #endregion
 
         #region Helper Methods
 
