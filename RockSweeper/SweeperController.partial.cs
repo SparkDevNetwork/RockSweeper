@@ -804,7 +804,7 @@ WHERE AV.EntityId = 0
                 return;
             }
 
-            var attributeValueId = SqlScalar<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = { attributeId }" );
+            var attributeValueId = SqlScalar<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = { attributeId.Value }" );
             var parameters = new Dictionary<string, object>
             {
                 { "Value", value }
@@ -812,11 +812,11 @@ WHERE AV.EntityId = 0
 
             if ( attributeValueId.HasValue )
             {
-                SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { attributeValueId }", parameters );
+                SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { attributeValueId.Value }", parameters );
             }
             else
             {
-                SqlCommand( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, { attributeValueId.Value }, @Value, NEWID())", parameters );
+                SqlCommand( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, { attributeId.Value }, @Value, NEWID())", parameters );
             }
         }
 
