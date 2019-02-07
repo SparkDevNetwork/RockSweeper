@@ -957,23 +957,24 @@ ELSE
         {
             string columns = string.Join( "], [", columnNames );
             int processedRows = 0;
-            int nextOffset = 0;
             int chunkSize = 1000;
-            int totalCount = SqlScalar<int>( $"SELECT COUNT(*) FROM [{ tableName }]" );
+            var rowIds = SqlQuery<int>( $"SELECT [Id] FROM [{ tableName }] ORDER BY [Id]" );
+            int totalCount = rowIds.Count;
 
             void ProcessChunk()
             {
-                int offset = 0;
+                List<int> chunkRowIds;
 
                 lock ( this )
                 {
-                    offset = nextOffset;
-                    nextOffset += chunkSize;
+                    chunkRowIds = rowIds.Take( chunkSize ).ToList();
+                    rowIds = rowIds.Skip( chunkSize ).ToList();
                 }
-                var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
 
-                while ( rows.Count > 0 )
+                while ( chunkRowIds.Any() )
                 {
+                    var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] WHERE [Id] IN ({ string.Join( ",", chunkRowIds ) })" );
+
                     for ( int i = 0; i < rows.Count; i++ )
                     {
                         int valueId = ( int ) rows[i]["Id"];
@@ -1007,10 +1008,9 @@ ELSE
                         processedRows += rows.Count;
                         Progress( processedRows / ( double ) totalCount, step, stepCount );
 
-                        offset = nextOffset;
-                        nextOffset += chunkSize;
+                        chunkRowIds = rowIds.Take( chunkSize ).ToList();
+                        rowIds = rowIds.Skip( chunkSize ).ToList();
                     }
-                    rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
                 }
             }
 
