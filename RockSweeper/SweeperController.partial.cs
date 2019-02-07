@@ -401,6 +401,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     return ( T ) command.ExecuteScalar();
                 }
@@ -422,6 +423,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -454,6 +456,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -488,6 +491,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -524,6 +528,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -562,6 +567,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -596,6 +602,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     using ( var reader = command.ExecuteReader() )
                     {
@@ -639,6 +646,7 @@ namespace RockSweeper
                 using ( var command = connection.CreateCommand() )
                 {
                     command.CommandText = sql;
+                    command.CommandTimeout = 300;
 
                     if ( parameters != null )
                     {
