@@ -1126,7 +1126,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
 
                     if ( !string.IsNullOrWhiteSpace( county ) )
                     {
-                        changes.Add( "County", DataFaker.Address.Country() );
+                        changes.Add( "County", DataFaker.Address.County() );
                     }
 
                     if ( !string.IsNullOrWhiteSpace( postalCode ) )
