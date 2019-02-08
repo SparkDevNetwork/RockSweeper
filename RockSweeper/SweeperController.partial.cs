@@ -689,7 +689,18 @@ namespace RockSweeper
                     }
                 }
 
-                SqlCommand( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }", updatedValues );
+                try
+                {
+                    SqlCommand( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }", updatedValues );
+                }
+                catch ( Exception e )
+                {
+                    System.Diagnostics.Debug.WriteLine( $"{ e.Message }:" );
+                    System.Diagnostics.Debug.WriteLine( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }" );
+                    System.Diagnostics.Debug.WriteLine( Newtonsoft.Json.JsonConvert.SerializeObject( updatedValues, Newtonsoft.Json.Formatting.Indented ) );
+
+                    throw e;
+                }
             }
         }
 
