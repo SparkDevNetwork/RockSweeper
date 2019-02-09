@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -371,6 +372,82 @@ namespace RockSweeper
             return address;
         }
 
+        /// <summary>
+        /// Processes the items in parallel.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items">The items to be processed.</param>
+        /// <param name="chunkSize">Size of the chunk to process at one time.</param>
+        /// <param name="processor">The processor function to call for each chunk.</param>
+        /// <param name="progress">The progress to call to indicate how far along we are (1 = 100%).</param>
+        protected void ProcessItemsInParallel<T>( List<T> items, int chunkSize, Action<List<T>> processor, Action<double> progress )
+        {
+            int totalItems = items.Count;
+            int processedItems = 0;
+            var lockObject = new object();
+            var cancelProcessTokenSource = new CancellationTokenSource();
+            var cancelProcessToken = cancelProcessTokenSource.Token;
+
+            void ProcessChunk()
+            {
+                List<T> chunkItems;
+
+                lock ( lockObject )
+                {
+                    chunkItems = items.Take( chunkSize ).ToList();
+                    items = items.Skip( chunkSize ).ToList();
+                }
+
+                while ( chunkItems.Any() )
+                {
+                    processor( chunkItems );
+
+                    cancelProcessToken.ThrowIfCancellationRequested();
+
+                    lock ( lockObject )
+                    {
+                        processedItems += chunkItems.Count;
+                        progress( processedItems / ( double ) totalItems );
+
+                        chunkItems = items.Take( chunkSize ).ToList();
+                        items = items.Skip( chunkSize ).ToList();
+                    }
+                }
+            }
+
+            //
+            // Create all the tasks we need.
+            //
+            var tasks = new List<System.Threading.Tasks.Task>();
+            for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
+            {
+                var task = new System.Threading.Tasks.Task( ProcessChunk, cancelProcessToken );
+                tasks.Add( task );
+                task.Start();
+            }
+
+            //
+            // Wait for the tasks to complete. Also cancels tasks if we need to.
+            //
+            while ( tasks.Any( t => !t.IsCompleted ) )
+            {
+                Thread.Sleep( 100 );
+
+                if ( CancellationToken?.IsCancellationRequested ?? false || tasks.Any( t => t.IsFaulted ) )
+                {
+                    cancelProcessTokenSource.Cancel();
+                }
+            }
+
+            //
+            // If any task threw an exception, re-throw it.
+            //
+            if ( tasks.Any( t => t.IsFaulted ) )
+            {
+                throw tasks.First( t => t.IsFaulted ).Exception.InnerException;
+            }
+        }
+
         #endregion
 
         #region SQL Methods
@@ -704,6 +781,104 @@ namespace RockSweeper
             }
         }
 
+        /// <summary>
+        /// Updates the database records in bulk.
+        /// </summary>
+        /// <param name="tableName">Name of the table to update.</param>
+        /// <param name="records">The records to be updated.</param>
+        /// <exception cref="Exception">Unknown column type '' in bulk update.</exception>
+        protected void UpdateDatabaseRecords( string tableName, List<Tuple<int, Dictionary<string, object>>> records )
+        {
+            var dt = new DataTable( "BulkUpdate" );
+
+            //
+            // Generate all the data table columns found in the source of records.
+            //
+            dt.Columns.Add( "Id", typeof( int ) );
+            foreach ( var r in records )
+            {
+                foreach ( var k in r.Item2.Keys )
+                {
+                    if ( dt.Columns.Contains( k ) )
+                    {
+                        continue;
+                    }
+
+                    dt.Columns.Add( k, r.Item2[k].GetType() );
+                }
+            }
+
+            //
+            // Load the data into our in-memory data table.
+            //
+            foreach ( var r in records )
+            {
+                var dr = dt.NewRow();
+                dr["Id"] = r.Item1;
+                foreach ( var k in r.Item2.Keys )
+                {
+                    dr[k] = r.Item2[k];
+                }
+                dt.Rows.Add( dr );
+            }
+
+            using ( var connection = GetDatabaseConnection() )
+            {
+                using ( var command = connection.CreateCommand() )
+                {
+                    var columns = new List<string>();
+                    var setColumns = new List<string>();
+
+                    //
+                    // Generate the SQL column list as well as the SET statements.
+                    //
+                    foreach ( DataColumn c in dt.Columns )
+                    {
+                        if ( c.DataType == typeof( string ) )
+                        {
+                            columns.Add( $"[{ c.ColumnName }] [varchar](max) NULL" );
+                        }
+                        else if ( c.DataType == typeof(int))
+                        {
+                            columns.Add( $"[{ c.ColumnName }] [int] NULL" );
+                        }
+                        else
+                        {
+                            throw new Exception( $"Unknown column type '{ c.DataType.FullName }' in bulk update." );
+                        }
+
+                        if ( c.ColumnName != "Id" )
+                        {
+                            setColumns.Add( $"T.[{ c.ColumnName }] = ISNULL(U.[{ c.ColumnName }], T.[{ c.ColumnName }])" );
+                        }
+                    }
+
+                    //
+                    // Create a temporary table to bulk insert our changes into.
+                    //
+                    command.CommandText = $"CREATE TABLE #BulkUpdate({ string.Join( ",", columns ) })";
+                    command.ExecuteNonQuery();
+
+                    //
+                    // Use SqlBulkCopy to insert all the changes in bulk.
+                    //
+                    using ( SqlBulkCopy bulkCopy = new SqlBulkCopy( connection ) )
+                    {
+                        bulkCopy.BulkCopyTimeout = 600;
+                        bulkCopy.DestinationTableName = "#BulkUpdate";
+                        bulkCopy.WriteToServer( dt );
+                    }
+
+                    //
+                    // Now run a SQL statement that updates any non-NULL columns into the real table.
+                    //
+                    command.CommandTimeout = 300;
+                    command.CommandText = $"UPDATE T SET { string.Join( ",", setColumns ) } FROM [{ tableName }] AS T INNER JOIN #BulkUpdate AS U ON U.[Id] = T.[Id]";
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
         #endregion
 
         #region Rock Helper Methods
@@ -967,81 +1142,43 @@ ELSE
         protected void ScrubTableTextColumns( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, int? step, int? stepCount )
         {
             string columns = string.Join( "], [", columnNames );
-            int processedRows = 0;
-            int chunkSize = 1000;
             var rowIds = SqlQuery<int>( $"SELECT [Id] FROM [{ tableName }] ORDER BY [Id]" );
-            int totalCount = rowIds.Count;
 
-            void ProcessChunk()
+            CancellationToken?.ThrowIfCancellationRequested();
+
+            ProcessItemsInParallel( rowIds, 1000, ( itemIds ) =>
             {
-                List<int> chunkRowIds;
+                var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] WHERE [Id] IN ({ string.Join( ",", itemIds ) })" );
 
-                lock ( this )
+                for ( int i = 0; i < rows.Count; i++ )
                 {
-                    chunkRowIds = rowIds.Take( chunkSize ).ToList();
-                    rowIds = rowIds.Skip( chunkSize ).ToList();
-                }
+                    int valueId = ( int ) rows[i]["Id"];
+                    var updatedValues = new Dictionary<string, object>();
 
-                while ( chunkRowIds.Any() )
-                {
-                    var rows = SqlQuery( $"SELECT [Id], [{ columns }] FROM [{ tableName }] WHERE [Id] IN ({ string.Join( ",", chunkRowIds ) })" );
-
-                    for ( int i = 0; i < rows.Count; i++ )
+                    foreach ( var c in columnNames )
                     {
-                        int valueId = ( int ) rows[i]["Id"];
-                        var updatedValues = new Dictionary<string, object>();
+                        var value = ( string ) rows[i][c];
 
-                        foreach ( var c in columnNames )
+                        if ( !string.IsNullOrWhiteSpace( value ) )
                         {
-                            var value = ( string ) rows[i][c];
+                            var newValue = replacement( value );
 
-                            if ( !string.IsNullOrWhiteSpace( value ) )
+                            if ( value != newValue )
                             {
-                                var newValue = replacement( value );
-
-                                if ( value != newValue )
-                                {
-                                    updatedValues.Add( c, newValue );
-                                }
+                                updatedValues.Add( c, newValue );
                             }
                         }
-
-                        if ( updatedValues.Any() )
-                        {
-                            UpdateDatabaseRecord( tableName, valueId, updatedValues );
-                        }
-
-                        CancellationToken?.ThrowIfCancellationRequested();
                     }
 
-                    lock ( this )
+                    if ( updatedValues.Any() )
                     {
-                        processedRows += rows.Count;
-                        Progress( processedRows / ( double ) totalCount, step, stepCount );
-
-                        chunkRowIds = rowIds.Take( chunkSize ).ToList();
-                        rowIds = rowIds.Skip( chunkSize ).ToList();
+                        UpdateDatabaseRecord( tableName, valueId, updatedValues );
                     }
                 }
-            }
-
-            var tasks = new List<System.Threading.Tasks.Task>();
-            for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
+            }, ( p ) =>
             {
-                var task = new System.Threading.Tasks.Task( ProcessChunk );
-                tasks.Add( task );
-                task.Start();
-            }
-
-            while ( tasks.Any( t => !t.IsCompleted ) )
-            {
-                Thread.Sleep( 100 );
-            }
-
-            if ( tasks.Any( t => t.IsFaulted ) )
-            {
-                throw tasks.First( t => t.IsFaulted ).Exception.InnerException;
-            }
+                Progress( p, step, stepCount );
+            } );
         }
 
         #endregion

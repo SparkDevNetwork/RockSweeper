@@ -146,17 +146,33 @@ namespace RockSweeper
 
             //
             // Stage 1: Replace all Person e-mail addresses.
+            // 51.26 single thread.
+            // 10.43 multi-threaded.
+            // 4.26 multi-threaded bulk update.
             //
             var peopleAddresses = SqlQuery<int, string>( "SELECT [Id], [Email] FROM [Person] WHERE [Email] IS NOT NULL AND [Email] != ''" );
-            for ( int i = 0; i < peopleAddresses.Count; i++ )
+            ProcessItemsInParallel( peopleAddresses, 1000, ( items ) =>
             {
-                int personId = peopleAddresses[i].Item1;
-                string email = GenerateFakeEmailAddressForAddress( peopleAddresses[i].Item2 );
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                SqlCommand( $"UPDATE [Person] SET [Email] = '{ email }' WHERE [Id] = { personId }" );
+                foreach (var p in items)
+                {
+                    var changes = new Dictionary<string, object>
+                    {
+                        { "Email", GenerateFakeEmailAddressForAddress( p.Item2 ) }
+                    };
 
-                Progress( i / ( double ) peopleAddresses.Count, 1, stepCount );
-            }
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( p.Item1, changes ) );
+                }
+
+                if ( bulkChanges.Any() )
+                {
+                    UpdateDatabaseRecords( "Person", bulkChanges );
+                }
+            }, ( p ) =>
+            {
+                Progress( p, 1, stepCount );
+            } );
 
             //
             // Stage 2: Replace all AttributeValue e-mail addresses.
@@ -172,23 +188,30 @@ namespace RockSweeper
             };
 
             var attributeValues = SqlQuery<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({ string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) ) }) AND AV.[Value] LIKE '%@%'" );
-            for ( int i = 0; i < attributeValues.Count; i++ )
+            ProcessItemsInParallel( attributeValues, 1000, ( items ) =>
             {
-                int valueId = attributeValues[i].Item1;
-                string value = attributeValues[i].Item2;
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                var newValue = ScrubEmailAddressForContent( value );
-
-                if ( value != newValue )
+                foreach ( var av in items )
                 {
-                    SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { valueId }", new Dictionary<string, object>
+                    var newValue = ScrubEmailAddressForContent( av.Item2 );
+
+                    if ( newValue != av.Item2 )
                     {
-                        { "Value", newValue }
-                    } );
+                        var changes = new Dictionary<string, object>
+                        {
+                            { "Value", newValue }
+                        };
+
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( av.Item1, changes ) );
+                    }
                 }
 
-                Progress( i / ( double ) attributeValues.Count, 2, stepCount );
-            }
+                UpdateDatabaseRecords( "AttributeValue", bulkChanges );
+            }, ( p ) =>
+            {
+                Progress( p, 2, stepCount );
+            } );
 
             //
             // Stage 3: Scrub the global attributes.
@@ -228,158 +251,124 @@ namespace RockSweeper
         /// </summary>
         public void InsertHistoryPlaceholders()
         {
-            int totalCount = SqlScalar<int>( "SELECT COUNT(*) FROM [History]" );
-            int chunkSize = 2500;
-            int nextOffset = 0;
-            int processedRows = 0;
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
             var loginFieldValueRegex = new Regex( "(.*logged in.*<span class=['\"]field-name['\"]>)([^<]*)(<\\/span>)" );
 
-            void ProcessChunk()
+            var historyIds = SqlQuery<int>( $"SELECT [Id] FROM [History]" );
+
+            void ProcessChunk(List<int> items)
             {
-                int offset = 0;
+                var historyItems = SqlQuery( $"SELECT * FROM [History] WHERE [Id] IN ({ string.Join( ",", items ) })" );
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                lock ( this )
+                foreach ( var history in historyItems )
                 {
-                    offset = nextOffset;
-                    nextOffset += chunkSize;
-                }
+                    var changes = new Dictionary<string, object>();
 
-                var histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
-
-                while ( histories.Any() )
-                {
-                    for ( int i = 0; i < histories.Count; i++ )
+                    //
+                    // Scrub the Caption.
+                    //
+                    var caption = ( string ) history["Caption"];
+                    if ( !string.IsNullOrWhiteSpace( caption ) )
                     {
-                        var changes = new Dictionary<string, object>();
-                        var history = histories[i];
+                        var value = string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) );
 
-                        //
-                        // Scrub the Caption.
-                        //
-                        var caption = ( string ) history["Caption"];
-                        if ( !string.IsNullOrWhiteSpace( caption ) )
+                        if ( value.Length > 200 )
                         {
-                            var value = string.Join( " ", DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) );
-
-                            if ( value.Length > 200 )
-                            {
-                                value = value.Substring( 0, 200 );
-                            }
-
-                            changes.Add( "Caption", value );
+                            value = value.Substring( 0, 200 );
                         }
 
-                        //
-                        // Scrub the Summary.
-                        //
-                        var summary = ( string ) history["Summary"];
-                        if ( !string.IsNullOrWhiteSpace( summary ) )
+                        changes.Add( "Caption", value );
+                    }
+
+                    //
+                    // Scrub the Summary.
+                    //
+                    var summary = ( string ) history["Summary"];
+                    if ( !string.IsNullOrWhiteSpace( summary ) )
+                    {
+                        var newValue = fieldValueRegex.Replace( summary, ( m ) =>
                         {
-                            var newValue = fieldValueRegex.Replace( summary, ( m ) =>
-                            {
-                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                            } );
+                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                        } );
 
-                            newValue = loginFieldValueRegex.Replace( newValue, ( m ) =>
-                            {
-                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                            } );
-
-                            if ( newValue != summary )
-                            {
-                                changes.Add( "Summary", newValue );
-                            }
-                        }
-
-                        //
-                        // Scrub the RelatedData to remove any mentions of the original values.
-                        //
-                        var relatedData = ( string ) history["RelatedData"];
-                        if ( !string.IsNullOrWhiteSpace( relatedData ) )
+                        newValue = loginFieldValueRegex.Replace( newValue, ( m ) =>
                         {
-                            var newValue = fieldValueRegex.Replace( relatedData, ( m ) =>
-                            {
-                                return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
-                            } );
+                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                        } );
 
-                            if ( newValue != relatedData )
-                            {
-                                changes.Add( "RelatedData", newValue );
-                            }
-                        }
-
-                        //
-                        // Scrub the OldValue.
-                        //
-                        if ( history.ContainsKey( "OldValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["OldValue"] ) )
+                        if ( newValue != summary )
                         {
-                            changes.Add( "OldValue", "HIDDEN" );
+                            changes.Add( "Summary", newValue );
                         }
+                    }
 
-                        //
-                        // Scrub the NewValue.
-                        //
-                        if ( history.ContainsKey( "NewValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["NewValue"] ) )
+                    //
+                    // Scrub the RelatedData to remove any mentions of the original values.
+                    //
+                    var relatedData = ( string ) history["RelatedData"];
+                    if ( !string.IsNullOrWhiteSpace( relatedData ) )
+                    {
+                        var newValue = fieldValueRegex.Replace( relatedData, ( m ) =>
                         {
-                            changes.Add( "NewValue", "HIDDEN" );
-                        }
+                            return $"{ m.Groups[1].Value }HIDDEN{ m.Groups[3].Value }";
+                        } );
 
-                        //
-                        // Scrub the ValueName.
-                        //
-                        var verb = ( string ) history["Verb"];
-                        if ( verb == "ADDEDTOGROUP" || verb == "REMOVEDROMGROUP" || verb == "REGISTERED" || verb == "MERGE" )
+                        if ( newValue != relatedData )
+                        {
+                            changes.Add( "RelatedData", newValue );
+                        }
+                    }
+
+                    //
+                    // Scrub the OldValue.
+                    //
+                    if ( history.ContainsKey( "OldValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["OldValue"] ) )
+                    {
+                        changes.Add( "OldValue", "HIDDEN" );
+                    }
+
+                    //
+                    // Scrub the NewValue.
+                    //
+                    if ( history.ContainsKey( "NewValue" ) && !string.IsNullOrWhiteSpace( ( string ) history["NewValue"] ) )
+                    {
+                        changes.Add( "NewValue", "HIDDEN" );
+                    }
+
+                    //
+                    // Scrub the ValueName.
+                    //
+                    var verb = ( string ) history["Verb"];
+                    if ( verb == "ADDEDTOGROUP" || verb == "REMOVEDROMGROUP" || verb == "REGISTERED" || verb == "MERGE" )
+                    {
+                        changes.Add( "ValueName", "HIDDEN" );
+                    }
+                    else if ( verb == "LOGIN" && history.ContainsKey( "ValueName" ) )
+                    {
+                        var valueName = ( string ) history["ValueName"];
+                        if ( !string.IsNullOrWhiteSpace( valueName ) && valueName.StartsWith( "fakeuser" ) )
                         {
                             changes.Add( "ValueName", "HIDDEN" );
                         }
-                        else if ( verb == "LOGIN" && history.ContainsKey( "ValueName" ) )
-                        {
-                            var valueName = ( string ) history["ValueName"];
-                            if ( !string.IsNullOrWhiteSpace( valueName ) && valueName.StartsWith( "fakeuser" ) )
-                            {
-                                changes.Add( "ValueName", "HIDDEN" );
-                            }
-                        }
-
-                        if ( changes.Any() )
-                        {
-                            UpdateDatabaseRecord( "History", ( int ) history["Id"], changes );
-                        }
-
-                        CancellationToken?.ThrowIfCancellationRequested();
                     }
 
-                    lock ( this )
+                    if ( changes.Any() )
                     {
-                        processedRows += histories.Count;
-                        Progress( processedRows / ( double ) totalCount );
-
-                        offset = nextOffset;
-                        nextOffset += chunkSize;
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( ( int ) history["Id"], changes ) );
                     }
+                }
 
-                    histories = SqlQuery( $"SELECT * FROM [History] ORDER BY [Id] OFFSET { offset } ROWS FETCH NEXT { chunkSize } ROWS ONLY" );
+                if ( bulkChanges.Any() )
+                {
+                    UpdateDatabaseRecords( "History", bulkChanges );
                 }
             }
 
-            var tasks = new List<System.Threading.Tasks.Task>();
-            for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
+            ProcessItemsInParallel( historyIds, 1000, ProcessChunk, ( p ) =>
             {
-                var task = new System.Threading.Tasks.Task( ProcessChunk );
-                tasks.Add( task );
-                task.Start();
-            }
-
-            while ( tasks.Any( t => !t.IsCompleted ) )
-            {
-                Thread.Sleep( 100 );
-            }
-
-            if ( tasks.Any( t => t.IsFaulted ) )
-            {
-                throw tasks.First( t => t.IsFaulted ).Exception.InnerException;
-            }
+                Progress( p );
+            } );
         }
 
         /// <summary>
@@ -389,17 +378,23 @@ namespace RockSweeper
         {
             var logins = SqlQuery<int, string>( "SELECT [Id], [UserName] FROM [UserLogin]" );
 
-            for ( int i = 0; i < logins.Count; i++ )
+            ProcessItemsInParallel( logins, 1000, ( items ) =>
             {
-                var login = logins[i];
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                if ( i % 100 == 0 )
+                foreach ( var login in items )
                 {
-                    Progress( i / ( double ) logins.Count );
-                }
+                    var changes = new Dictionary<string, object>
+                    {
+                        { "UserLogin", GenerateFakeLoginForLogin( login.Item2 ) }
+                    };
 
-                SqlCommand( $"UPDATE [UserLogin] SET [UserName] = '{ GenerateFakeLoginForLogin( login.Item2 ) }' WHERE [Id] = { login.Item1 }" );
-            }
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( login.Item1, changes ) );
+                }
+            }, ( p ) =>
+            {
+                Progress( p );
+            } );
         }
 
         /// <summary>
@@ -474,29 +469,43 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
             // Stage 1: Replace all Person phone numbers.
             //
             var phoneNumbers = SqlQuery<int, string>( "SELECT [Id], [Number] FROM [PhoneNumber] WHERE [Number] != ''" );
-            for ( int i = 0; i < phoneNumbers.Count; i++ )
+            ProcessItemsInParallel( phoneNumbers, 1000, ( items ) =>
             {
-                int phoneNumberId = phoneNumbers[i].Item1;
-                string phoneNumber = GenerateFakePhoneNumberForPhone( phoneNumbers[i].Item2 );
-                string numberFormatted;
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                if ( phoneNumber.Length == 10 )
+                foreach ( var item in items )
                 {
-                    numberFormatted = $"({ phoneNumber.Substring( 0, 3 ) }) { phoneNumber.Substring( 3, 4 ) }-{ phoneNumber.Substring( 7 ) }";
-                }
-                else if ( phoneNumber.Length == 7 )
-                {
-                    numberFormatted = phoneNumber.Substring( 0, 3 ) + "-" + phoneNumber.Substring( 3 );
-                }
-                else
-                {
-                    numberFormatted = phoneNumber;
+                    var changes = new Dictionary<string, object>();
+                    var phoneNumber = GenerateFakePhoneNumberForPhone( item.Item2 );
+                    string numberFormatted;
+
+                    if ( phoneNumber.Length == 10 )
+                    {
+                        numberFormatted = $"({ phoneNumber.Substring( 0, 3 ) }) { phoneNumber.Substring( 3, 4 ) }-{ phoneNumber.Substring( 7 ) }";
+                    }
+                    else if ( phoneNumber.Length == 7 )
+                    {
+                        numberFormatted = phoneNumber.Substring( 0, 3 ) + "-" + phoneNumber.Substring( 3 );
+                    }
+                    else
+                    {
+                        numberFormatted = phoneNumber;
+                    }
+
+                    changes.Add( "Number", phoneNumber );
+                    changes.Add( "NumberFormatted", numberFormatted );
+
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( item.Item1, changes ) );
                 }
 
-                SqlCommand( $"UPDATE [PhoneNumber] SET [Number] = '{ phoneNumber }', [NumberFormatted] = '{ numberFormatted }' WHERE [Id] = { phoneNumberId }" );
-
-                Progress( i / ( double ) phoneNumbers.Count, 1, stepCount );
-            }
+                if ( bulkChanges.Any() )
+                {
+                    UpdateDatabaseRecords( "PhoneNumber", bulkChanges );
+                }
+            }, ( p ) =>
+            {
+                Progress( p, 1, stepCount );
+            } );
 
             //
             // Stage 2: Replace all AttributeValue phone numbers.
@@ -512,23 +521,33 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
             };
 
             var attributeValues = SqlQuery<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({ string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) ) }) AND AV.[Value] != ''" );
-            for ( int i = 0; i < attributeValues.Count; i++ )
+            ProcessItemsInParallel( attributeValues, 1000, ( items ) =>
             {
-                int valueId = attributeValues[i].Item1;
-                string value = attributeValues[i].Item2;
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                var newValue = ScrubPhoneNumberForContent( value );
-
-                if ( value != newValue )
+                foreach ( var item in items )
                 {
-                    SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { valueId }", new Dictionary<string, object>
+                    var newValue = ScrubPhoneNumberForContent( item.Item2 );
+
+                    if ( newValue != item.Item2 )
                     {
-                        { "Value", newValue }
-                    } );
+                        var changes = new Dictionary<string, object>
+                        {
+                            { "Value", newValue }
+                        };
+
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( item.Item1, changes ) );
+                    }
                 }
 
-                Progress( i / ( double ) attributeValues.Count, 2, stepCount );
-            }
+                if ( bulkChanges.Any() )
+                {
+                    UpdateDatabaseRecords( "AttributeValue", bulkChanges );
+                }
+            }, ( p ) =>
+            {
+                Progress( p, 2, stepCount );
+            } );
 
             //
             // Stage 3: Scrub the global attributes.
