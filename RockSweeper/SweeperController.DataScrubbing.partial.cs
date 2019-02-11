@@ -386,11 +386,13 @@ namespace RockSweeper
                 {
                     var changes = new Dictionary<string, object>
                     {
-                        { "UserLogin", GenerateFakeLoginForLogin( login.Item2 ) }
+                        { "UserName", GenerateFakeLoginForLogin( login.Item2 ) }
                     };
 
                     bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( login.Item1, changes ) );
                 }
+
+                UpdateDatabaseRecords( "UserLogin", bulkChanges );
             }, ( p ) =>
             {
                 Progress( p );
