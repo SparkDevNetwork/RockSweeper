@@ -96,8 +96,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Attributes\RequiresRockWebAttribute.cs" />
     <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
+    <Compile Include="Utility\BoolToValueConverterT.cs" />
     <Compile Include="Utility\Coordinates.cs" />
     <Compile Include="Dialogs\PreferencesDialog.xaml.cs">
       <DependentUpon>PreferencesDialog.xaml</DependentUpon>

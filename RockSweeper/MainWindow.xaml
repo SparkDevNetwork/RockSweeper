@@ -4,10 +4,17 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RockSweeper"
+        xmlns:utility="clr-namespace:RockSweeper.Utility"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
         Closing="Window_Closing"
         Title="Rock Sweeper" Height="450" Width="800">
+    <Window.Resources>
+        <utility:BoolToBrushConverter
+            x:Key="BoolToEnabledTextConverter"
+            FalseValue="LightGray"
+            TrueValue="Black" />
+    </Window.Resources>
     <DockPanel LastChildFill="True">
         <ToolBarTray DockPanel.Dock="Top" IsLocked="True">
             <ToolBar>
@@ -59,14 +66,21 @@
                     <DataGridTemplateColumn>
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Path=Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <CheckBox HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding Path=Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          IsThreeState="True"
+                                          IsEnabled="{Binding Path=Enabled}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn IsReadOnly="True" Binding="{Binding Path=FullName}" Width="*">
+                    <DataGridTextColumn IsReadOnly="True"
+                                        Binding="{Binding Path=FullName}"
+                                        Width="*">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
-                                <Setter Property="ToolTip" Value="{Binding Path=Action.Description}" />
+                                <Setter Property="Foreground" Value="{Binding Path=Enabled, Converter={StaticResource BoolToEnabledTextConverter}}" />
+                                <Setter Property="ToolTip" Value="{Binding Path=Description}" />
                             </Style>
                         </DataGridTextColumn.CellStyle>
                     </DataGridTextColumn>

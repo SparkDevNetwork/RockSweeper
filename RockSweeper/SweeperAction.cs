@@ -37,11 +37,13 @@ namespace RockSweeper
         [Description( "Updates the Rock configuration to ensure that all communication transports are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableCommunicationTransports,
 
         [Title( "Reset Communication Transports" )]
         [Description( "Resets all transport configuration to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetCommunicationTransports,
 
         [Title( "Configure For Localhost SMTP")]
@@ -67,77 +69,91 @@ namespace RockSweeper
         [Description( "Updates the Rock configuration to ensure that authentication services other than database, AD and PIN are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableExternalAuthenticationServices,
 
         [Title( "Reset External Authentication Services" )]
         [Description( "Resets authentication services other than database, AD and PIN to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetExternalAuthenticationServices,
 
         [Title( "Disable Authentication Services" )]
         [Description( "Updates the Rock configuration to ensure that authentication services other than database and PIN are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableAuthenticationServices,
 
         [Title( "Reset Authentication Services" )]
         [Description( "Resets authentication services other than database and PIN to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetAuthenticationServices,
 
         [Title( "Disable Location Services" )]
         [Description( "Updates the Rock configuration to ensure that all location services are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableLocationServices,
 
         [Title( "Reset Location Services" )]
         [Description( "Resets all location services to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetLocationServices,
 
         [Title( "Disable External Storage Providers" )]
         [Description( "Updates the Rock configuration to ensure that storage providers other than database and filesystem are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableExternalStorageProviders,
 
         [Title( "Reset External Storage Providers" )]
         [Description( "Resets storage providers other than database and filesystem to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetExternalStorageProviders,
 
         [Title( "Disable Background Check Providers" )]
         [Description( "Updates the Rock configuration to ensure that all background check providers are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableBackgroundCheckProviders,
 
         [Title( "Reset Background Check Providers" )]
         [Description( "Resets all background check providers to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetBackgroundCheckProviders,
 
         [Title( "Disable Signature Document Providers" )]
         [Description( "Updates the Rock configuration to ensure that all signed document providers are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisableSignatureDocumentProviders,
 
         [Title( "Reset Signature Document Providers" )]
         [Description( "Resets all signed document providers to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetSignatureDocumentProviders,
 
         [Title( "Disable Phone Systems" )]
         [Description( "Updates the Rock configuration to ensure that all phone systems are disabled." )]
         [Category( "System Settings" )]
         [DefaultValue( true )]
+        [RequiresRockWeb]
         DisablePhoneSystems,
 
         [Title( "Reset Phone Systems" )]
         [Description( "Resets all phone system settings to system default values." )]
         [Category( "System Settings" )]
+        [RequiresRockWeb]
         ResetPhoneSystems,
 
         [Title( "Reset Google API Keys" )]

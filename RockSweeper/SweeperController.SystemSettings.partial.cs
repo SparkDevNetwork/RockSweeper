@@ -61,7 +61,7 @@
         {
             SqlCommand( $@"UPDATE FG
 SET FG.[IsActive] = 0
-FROM[FinancialGateway] AS FG
+FROM [FinancialGateway] AS FG
 INNER JOIN[EntityType] AS ET ON ET.[Id] = FG.[EntityTypeId]
 WHERE ET.[Name] != 'Rock.Financial.TestGateway'" );
         }

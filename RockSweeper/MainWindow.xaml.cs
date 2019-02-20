@@ -130,7 +130,7 @@ namespace RockSweeper
         {
             get
             {
-                if (!string.IsNullOrWhiteSpace( SqlDatabaseName ) && !string.IsNullOrWhiteSpace( RockWebFolder ) && !IsRunning )
+                if ( !string.IsNullOrWhiteSpace( SqlDatabaseName ) && !IsRunning )
                 {
                     return true;
                 }
@@ -220,9 +220,10 @@ namespace RockSweeper
                 .Cast<SweeperAction>()
                 .Select( a => new SweeperOption( a ) )
                 .OrderBy( o => o.Category )
-                .ThenBy( o => (int)o.Action )
+                .ThenBy( o => ( int ) o.Action )
                 .ToList()
                 .ForEach( o => ConfigOptions.Add( o ) );
+            UpdateOptionStates();
 
             DataContext = this;
         }
@@ -238,6 +239,21 @@ namespace RockSweeper
         protected void NotifyPropertyChanged( string propertyName )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+        }
+
+        /// <summary>
+        /// Updates the option states.
+        /// </summary>
+        protected void UpdateOptionStates()
+        {
+
+            foreach ( var option in ConfigOptions )
+            {
+                bool hasDatabase = !string.IsNullOrWhiteSpace( SqlDatabaseName );
+                bool hasRockWeb = !string.IsNullOrWhiteSpace( RockWebFolder );
+
+                option.Enabled = hasDatabase && ( !option.RequiresRockWeb || hasRockWeb );
+            }
         }
 
         /// <summary>
@@ -367,6 +383,8 @@ namespace RockSweeper
 
             var builder = new SqlConnectionStringBuilder( ConnectionString );
             SqlDatabaseName = $"{ builder.DataSource }\\{ builder.InitialCatalog }";
+
+            UpdateOptionStates();
         }
 
         /// <summary>
@@ -383,6 +401,8 @@ namespace RockSweeper
             }
 
             RockWebFolder = browser.FileName;
+
+            UpdateOptionStates();
         }
 
         /// <summary>
@@ -394,7 +414,7 @@ namespace RockSweeper
         {
             Sweeper = new SweeperController( ConnectionString, RockWebFolder );
 
-            var options = ConfigOptions.Where( o => o.Enabled ).ToList();
+            var options = ConfigOptions.Where( o => o.Enabled && o.Selected ).ToList();
             EnabledOptions = options.OrderBy( o => o.RunAfterActions.Count )
                 .TopologicalSort( ( o ) =>
                 {
@@ -441,7 +461,7 @@ namespace RockSweeper
         {
             foreach ( var option in ConfigOptions )
             {
-                option.Enabled = true;
+                option.Selected = true;
             }
         }
 
@@ -454,7 +474,7 @@ namespace RockSweeper
         {
             foreach ( var option in ConfigOptions )
             {
-                option.Enabled = false;
+                option.Selected = false;
             }
         }
 

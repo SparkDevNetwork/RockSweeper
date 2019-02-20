@@ -37,6 +37,23 @@ namespace RockSweeper.Utility
         private bool _enabled;
 
         /// <summary>
+        /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is selected.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if enabled; otherwise, <c>false</c>.
+        /// </value>
+        public bool Selected
+        {
+            get => _selected;
+            set
+            {
+                _selected = value;
+                NotifyPropertyChanged( "Selected" );
+            }
+        }
+        private bool _selected;
+
+        /// <summary>
         /// Gets the title.
         /// </summary>
         /// <value>
@@ -77,6 +94,14 @@ namespace RockSweeper.Utility
         public string FullName => $"{ Category } >> { Title }";
 
         /// <summary>
+        /// Gets a value indicating whether the RockWeb folder is required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresRockWeb => GetActionAttribute<RequiresRockWebAttribute>( Action ) != null;
+
+        /// <summary>
         /// Gets or sets the action.
         /// </summary>
         /// <value>
@@ -115,7 +140,7 @@ namespace RockSweeper.Utility
             var defaultValue = GetActionAttribute<DefaultValueAttribute>( action );
             if ( defaultValue != null )
             {
-                Enabled = (bool)defaultValue.Value;
+                Selected = (bool)defaultValue.Value;
             }
         }
 
