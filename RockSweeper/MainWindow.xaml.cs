@@ -296,7 +296,12 @@ namespace RockSweeper
                     Dispatcher.Invoke( () =>
                     {
                         progressLine.State = ProgressLineState.Failed;
-                        MessageBox.Show( this, e.Message, "Error while processing" );
+                        Exception ex = e;
+                        while ( ex.InnerException != null )
+                        {
+                            ex = ex.InnerException;
+                        }
+                        MessageBox.Show( this, ex.Message, "Error while processing" );
                     } );
 
                     StatusBarText = string.Empty;
