@@ -8,8 +8,8 @@
         /// <param name="actionData">The action data.</param>
         public void SanitizeApplicationRoots()
         {
-            SetGlobalAttributeValue( "InternalApplicationRoot", "rock.example.org" );
-            SetGlobalAttributeValue( "PublicApplicationRoot", "www.example.org" );
+            SetGlobalAttributeValue( "InternalApplicationRoot", "http://rock.example.org" );
+            SetGlobalAttributeValue( "PublicApplicationRoot", "http://www.example.org" );
         }
 
         /// <summary>
