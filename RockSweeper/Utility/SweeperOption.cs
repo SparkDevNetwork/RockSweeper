@@ -102,6 +102,14 @@ namespace RockSweeper.Utility
         public bool RequiresRockWeb => GetActionAttribute<RequiresRockWebAttribute>( Action ) != null;
 
         /// <summary>
+        /// Gets a value indicating whether location services are required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if location services are required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresLocationServices => GetActionAttribute<RequiresLocationServiceAttribute>( Action ) != null;
+
+        /// <summary>
         /// Gets or sets the action.
         /// </summary>
         /// <value>

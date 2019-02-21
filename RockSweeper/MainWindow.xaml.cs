@@ -251,8 +251,11 @@ namespace RockSweeper
             {
                 bool hasDatabase = !string.IsNullOrWhiteSpace( SqlDatabaseName );
                 bool hasRockWeb = !string.IsNullOrWhiteSpace( RockWebFolder );
+                bool hasLocationServices = !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppCode ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppId );
 
-                option.Enabled = hasDatabase && ( !option.RequiresRockWeb || hasRockWeb );
+                option.Enabled = hasDatabase;
+                option.Enabled = option.Enabled && ( !option.RequiresRockWeb || hasRockWeb );
+                option.Enabled = option.Enabled && ( !option.RequiresLocationServices || hasLocationServices );
             }
         }
 
@@ -364,6 +367,8 @@ namespace RockSweeper
         protected void Preferences_Click( object sender, RoutedEventArgs e )
         {
             new Dialogs.PreferencesDialog().ShowDialog();
+
+            UpdateOptionStates();
         }
 
         /// <summary>

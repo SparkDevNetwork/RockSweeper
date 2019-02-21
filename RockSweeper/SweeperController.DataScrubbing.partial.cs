@@ -71,6 +71,75 @@ namespace RockSweeper
 
         #endregion
 
+        #region Properties
+
+        /// <summary>
+        /// Gets the primary state for the database.
+        /// </summary>
+        /// <value>
+        /// The primary state for the database.
+        /// </value>
+        protected string LocationPrimaryState
+        {
+            get
+            {
+                if ( _locationPrimaryState == null )
+                {
+                    _locationPrimaryState = SqlScalar<string>( "SELECT TOP 1 [State] FROM [Location] GROUP BY [State] ORDER BY COUNT(*) DESC" );
+                }
+
+                return _locationPrimaryState;
+            }
+        }
+        private string _locationPrimaryState;
+
+        /// <summary>
+        /// Gets the location city postal codes.
+        /// </summary>
+        /// <value>
+        /// The location city postal codes.
+        /// </value>
+        protected Dictionary<string, List<string>> LocationCityPostalCodes
+        {
+            get
+            {
+                if ( _locationCityPostalCodes == null )
+                {
+                    var cityPostalCodes = new Dictionary<string, List<string>>();
+
+                    //
+                    // Setup the list of cities and postal codes to use when we don't have a geo-address.
+                    //
+                    var res = Bogus.ResourceHelper.ReadResource( GetType().Assembly, "RockSweeper.Resources.city_postal.csv" );
+                    var csv = System.Text.Encoding.UTF8.GetString( res ).Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries );
+                    foreach ( var cityPair in csv )
+                    {
+                        var pair = cityPair.Split( ',' );
+
+                        if ( pair.Length == 2 )
+                        {
+                            if ( !cityPostalCodes.ContainsKey( pair[0] ) )
+                            {
+                                cityPostalCodes.Add( pair[0], new List<string>() );
+                            }
+
+                            if ( !cityPostalCodes[pair[0]].Contains( pair[1] ) )
+                            {
+                                cityPostalCodes[pair[0]].Add( pair[1] );
+                            }
+                        }
+                    }
+
+                    _locationCityPostalCodes = cityPostalCodes;
+                }
+
+                return _locationCityPostalCodes;
+            }
+        }
+        private Dictionary<string, List<string>> _locationCityPostalCodes;
+
+        #endregion
+
         #region Helper Methods
 
         /// <summary>
@@ -132,6 +201,103 @@ namespace RockSweeper
             }
 
             return master;
+        }
+
+        /// <summary>
+        /// Updates the location with fake data.
+        /// </summary>
+        /// <param name="locationId">The location identifier.</param>
+        /// <param name="street1">The street1.</param>
+        /// <param name="street2">The street2.</param>
+        /// <param name="county">The county.</param>
+        /// <param name="postalCode">The postal code.</param>
+        /// <param name="state">The state.</param>
+        /// <param name="country">The country.</param>
+        void UpdateLocationWithFakeData( int locationId, string street1, string street2, string county, string postalCode, string state, string country )
+        {
+            var changes = new Dictionary<string, object>();
+
+            if ( country != "US" )
+            {
+                changes.Add( "Street1", DataFaker.Address.StreetAddress( false ) );
+                changes.Add( "City", $"{ DataFaker.Address.City() } { DataFaker.Address.CitySuffix() }" );
+                changes.Add( "Country", DataFaker.Address.CountryCode() );
+
+                if ( !string.IsNullOrWhiteSpace( street2 ) )
+                {
+                    changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( county ) )
+                {
+                    changes.Add( "County", DataFaker.Address.County() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( postalCode ) )
+                {
+                    changes.Add( "PostalCode", postalCode.RandomizeLettersAndNumbers() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( state ) )
+                {
+                    changes.Add( "State", DataFaker.Address.StateAbbr() );
+                }
+            }
+            else if ( state != LocationPrimaryState )
+            {
+                changes.Add( "Street1", DataFaker.Address.StreetAddress( street1.Contains( " Apt" ) ) );
+                changes.Add( "City", DataFaker.Address.City() );
+
+                if ( !string.IsNullOrWhiteSpace( street2 ) )
+                {
+                    changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( county ) )
+                {
+                    changes.Add( "County", DataFaker.Address.County() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( postalCode ) )
+                {
+                    changes.Add( "PostalCode", postalCode.RandomizeLettersAndNumbers() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( state ) )
+                {
+                    changes.Add( "State", DataFaker.Address.StateAbbr() );
+                }
+            }
+            else
+            {
+                var newCity = DataFaker.PickRandom( LocationCityPostalCodes.Keys.ToList() );
+                var newPostal = DataFaker.PickRandom( LocationCityPostalCodes[newCity] );
+
+                changes.Add( "Street1", DataFaker.Address.StreetAddress( street1.Contains( " Apt" ) ) );
+                changes.Add( "City", newCity );
+                changes.Add( "State", "AZ" );
+
+                if ( !string.IsNullOrWhiteSpace( street2 ) )
+                {
+                    changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( county ) )
+                {
+                    changes.Add( "County", "Maricopa" );
+                }
+
+                if ( postalCode.Contains( "-" ) )
+                {
+                    changes.Add( "PostalCode", $"{ newPostal }-{ postalCode.Split( '-' )[1] }" );
+                }
+                else
+                {
+                    changes.Add( "PostalCode", newPostal );
+                }
+            }
+
+            UpdateDatabaseRecord( "Location", locationId, changes );
         }
 
         #endregion
@@ -1068,34 +1234,9 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         public void GenerateRandomLocationAddresses()
         {
             int stepCount = 3;
-            var cityPostalCodes = new Dictionary<string, List<string>>();
-            string defaultState = SqlScalar<string>( "SELECT TOP 1 [State] FROM [Location] GROUP BY [State] ORDER BY COUNT(*) DESC" );
 
             //
-            // Setup the list of cities and postal codes to use when we don't have a geo-address.
-            //
-            var res = Bogus.ResourceHelper.ReadResource( GetType().Assembly, "RockSweeper.Resources.city_postal.csv" );
-            var csv = System.Text.Encoding.UTF8.GetString( res ).Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries );
-            foreach ( var cityPair in csv )
-            {
-                var pair = cityPair.Split( ',' );
-
-                if ( pair.Length == 2 )
-                {
-                    if ( !cityPostalCodes.ContainsKey( pair[0] ) )
-                    {
-                        cityPostalCodes.Add( pair[0], new List<string>() );
-                    }
-
-                    if ( !cityPostalCodes[pair[0]].Contains( pair[1] ) )
-                    {
-                        cityPostalCodes[pair[0]].Add( pair[1] );
-                    }
-                }
-            }
-
-            //
-            // Process all locations that are not geo-coded.
+            // Step 1: Process all locations that are not geo-coded.
             //
             var locations = SqlQuery( "SELECT [Id], [Street1], [Street2], [County], [PostalCode], [State], [Country] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
             for ( int i = 0; i < locations.Count; i++ )
@@ -1107,89 +1248,8 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 var postalCode = ( string ) locations[i]["PostalCode"];
                 var state = ( string ) locations[i]["State"];
                 var country = ( string ) locations[i]["Country"];
-                var changes = new Dictionary<string, object>();
 
-                if ( country != "US" )
-                {
-                    changes.Add( "Street1", DataFaker.Address.StreetAddress( false ) );
-                    changes.Add( "City", $"{ DataFaker.Address.City() } { DataFaker.Address.CitySuffix() }" );
-                    changes.Add( "Country", DataFaker.Address.CountryCode() );
-
-                    if ( !string.IsNullOrWhiteSpace( street2 ) )
-                    {
-                        changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( county ) )
-                    {
-                        changes.Add( "County", DataFaker.Address.County() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( postalCode ) )
-                    {
-                        changes.Add( "PostalCode", postalCode.RandomizeLettersAndNumbers() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( state ) )
-                    {
-                        changes.Add( "State", DataFaker.Address.StateAbbr() );
-                    }
-                }
-                else if ( state != defaultState )
-                {
-                    changes.Add( "Street1", DataFaker.Address.StreetAddress( street1.Contains( " Apt" ) ) );
-                    changes.Add( "City", DataFaker.Address.City() );
-
-                    if ( !string.IsNullOrWhiteSpace( street2 ) )
-                    {
-                        changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( county ) )
-                    {
-                        changes.Add( "County", DataFaker.Address.County() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( postalCode ) )
-                    {
-                        changes.Add( "PostalCode", postalCode.RandomizeLettersAndNumbers() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( state ) )
-                    {
-                        changes.Add( "State", DataFaker.Address.StateAbbr() );
-                    }
-                }
-                else
-                {
-                    var newCity = DataFaker.PickRandom( cityPostalCodes.Keys.ToList() );
-                    var newPostal = DataFaker.PickRandom( cityPostalCodes[newCity] );
-
-                    changes.Add( "Street1", DataFaker.Address.StreetAddress( street1.Contains( " Apt" ) ) );
-                    changes.Add( "City", newCity );
-                    changes.Add( "State", "AZ" );
-
-                    if ( !string.IsNullOrWhiteSpace( street2 ) )
-                    {
-                        changes.Add( "Street2", DataFaker.Address.SecondaryAddress() );
-                    }
-
-                    if ( !string.IsNullOrWhiteSpace( county ) )
-                    {
-                        changes.Add( "County", "Maricopa" );
-                    }
-
-                    if ( postalCode.Contains( "-" ) )
-                    {
-                        changes.Add( "PostalCode", $"{ newPostal }-{ postalCode.Split( '-' )[1] }" );
-                    }
-                    else
-                    {
-                        changes.Add( "PostalCode", newPostal );
-                    }
-                }
-
-                UpdateDatabaseRecord( "Location", locationId, changes );
+                UpdateLocationWithFakeData( locationId, street1, street2, county, postalCode, state, country );
 
                 Progress( i / ( double ) locations.Count, 1, stepCount );
             }
@@ -1286,46 +1346,54 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 var postalCode = ( string ) geoLocations[i]["PostalCode"];
                 var state = ( string ) geoLocations[i]["State"];
                 var country = ( string ) geoLocations[i]["Country"];
-                var changes = new Dictionary<string, object>();
 
-                var coordinates = new Coordinates( latitude, longitude );
-                coordinates = coordinates.CoordinatesByAdjusting( DataFaker.Random.Double( -0.0144927, 0.0144927 ), DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
-
-                var address = GetBestAddressForCoordinates( coordinates );
-
-                changes.Add( "GeoPoint", coordinates );
-
-                if ( !string.IsNullOrWhiteSpace( street1 ) )
+                if ( Properties.Settings.Default.JitterAddresses )
                 {
-                    changes.Add( "Street1", address.Street1 );
-                }
+                    var changes = new Dictionary<string, object>();
 
-                if ( !string.IsNullOrWhiteSpace( city ) )
+                    var coordinates = new Coordinates( latitude, longitude );
+                    coordinates = coordinates.CoordinatesByAdjusting( DataFaker.Random.Double( -0.0144927, 0.0144927 ), DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
+
+                    var address = GetBestAddressForCoordinates( coordinates );
+
+                    changes.Add( "GeoPoint", coordinates );
+
+                    if ( !string.IsNullOrWhiteSpace( street1 ) )
+                    {
+                        changes.Add( "Street1", address.Street1 );
+                    }
+
+                    if ( !string.IsNullOrWhiteSpace( city ) )
+                    {
+                        changes.Add( "City", address.City );
+                    }
+
+                    if ( !string.IsNullOrWhiteSpace( county ) )
+                    {
+                        changes.Add( "County", address.Country );
+                    }
+
+                    if ( !string.IsNullOrWhiteSpace( postalCode ) )
+                    {
+                        changes.Add( "PostalCode", address.PostalCode );
+                    }
+
+                    if ( !string.IsNullOrWhiteSpace( state ) )
+                    {
+                        changes.Add( "State", address.State );
+                    }
+
+                    if ( !string.IsNullOrWhiteSpace( country ) )
+                    {
+                        changes.Add( "Country", address.Country );
+                    }
+
+                    UpdateDatabaseRecord( "Location", locationId, changes );
+                }
+                else
                 {
-                    changes.Add( "City", address.City );
+                    UpdateLocationWithFakeData( locationId, street1, street2, county, postalCode, state, country );
                 }
-
-                if ( !string.IsNullOrWhiteSpace( county ) )
-                {
-                    changes.Add( "County", address.Country );
-                }
-
-                if ( !string.IsNullOrWhiteSpace( postalCode ) )
-                {
-                    changes.Add( "PostalCode", address.PostalCode );
-                }
-
-                if ( !string.IsNullOrWhiteSpace( state ) )
-                {
-                    changes.Add( "State", address.State );
-                }
-
-                if ( !string.IsNullOrWhiteSpace( country ) )
-                {
-                    changes.Add( "Country", address.Country );
-                }
-
-                UpdateDatabaseRecord( "Location", locationId, changes );
 
                 Progress( i / ( double ) geoLocations.Count, 3, stepCount );
             }

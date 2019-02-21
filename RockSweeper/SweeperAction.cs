@@ -278,6 +278,7 @@ namespace RockSweeper
         [Title( "Generate Random Location Addresses" )]
         [Description( "Generates random addresses in the database, centered around Phoenix, AZ." )]
         [Category( "Data Scrubbing" )]
+        [RequiresLocationServiceAttribute]
         GenerateRandomLocationAddresses,
 
         [Title( "Empty Saved Account Tables" )]
