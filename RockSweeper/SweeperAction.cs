@@ -46,7 +46,7 @@ namespace RockSweeper
         [RequiresRockWeb]
         ResetCommunicationTransports,
 
-        [Title( "Configure For Localhost SMTP")]
+        [Title( "Configure For Localhost SMTP" )]
         [Description( "Updates the communication settings to use a localhost SMTP server.")]
         [Category( "System Settings" )]
         [DefaultValue( true )]
@@ -175,7 +175,7 @@ namespace RockSweeper
 
         #region Storage
 
-        [Title( "Moves Binary Files Into Database" )]
+        [Title( "Move Binary Files Into Database" )]
         [Description( "Moves any binary file data stored externally into the database, this includes any filesystem storage.")]
         [Category( "Storage" )]
         MoveBinaryFilesIntoDatabase,
@@ -199,7 +199,7 @@ namespace RockSweeper
         ReplaceDatabaseDocumentsWithSizedPlaceholders,
 
         [Title( "Replace Database Documents With Empty Placeholders" )]
-        [Description( "Replaces any databsae-stored non-PNG and non-JPG files with empty file content." )]
+        [Description( "Replaces any database-stored non-PNG and non-JPG files with empty file content." )]
         [Category( "Storage" )]
         [AfterAction( MoveBinaryFilesIntoDatabase )]
         ReplaceDatabaseDocumentsWithEmptyPlaceholders,
@@ -235,7 +235,7 @@ namespace RockSweeper
         [AfterAction( GenerateRandomNames )]
         SanitizeBackgroundCheckData,
 
-        [Title( "Generate Random Phone Numbers " )]
+        [Title( "Generate Random Phone Numbers" )]
         [Description( "Replaces any phone numbers found in the system with generated values." )]
         [Category( "Data Scrubbing" )]
         GenerateRandomPhoneNumbers,
