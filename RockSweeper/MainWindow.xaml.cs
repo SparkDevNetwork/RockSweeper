@@ -219,7 +219,8 @@ namespace RockSweeper
             Enum.GetValues( typeof( SweeperAction ) )
                 .Cast<SweeperAction>()
                 .Select( a => new SweeperOption( a ) )
-                .OrderBy( o => o.Category )
+                .OrderBy( o => o.Category == "Data Scrubbing" )
+                .ThenBy( o => o.Category )
                 .ThenBy( o => ( int ) o.Action )
                 .ToList()
                 .ForEach( o => ConfigOptions.Add( o ) );
@@ -251,7 +252,7 @@ namespace RockSweeper
             {
                 bool hasDatabase = !string.IsNullOrWhiteSpace( SqlDatabaseName );
                 bool hasRockWeb = !string.IsNullOrWhiteSpace( RockWebFolder );
-                bool hasLocationServices = !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppCode ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppId );
+                bool hasLocationServices = !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppCode ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppId ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.TargetGeoCenter );
 
                 option.Enabled = hasDatabase;
                 option.Enabled = option.Enabled && ( !option.RequiresRockWeb || hasRockWeb );
