@@ -1400,6 +1400,75 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         }
 
         /// <summary>
+        /// Shuffles the location addresses.
+        /// </summary>
+        public void ShuffleLocationAddresses()
+        {
+            List<int> idNumbers;
+            int stepCount = 3;
+
+            //
+            // Step 1: Shuffle all locations that are not geo-coded.
+            //
+            var locations = SqlQuery( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
+            idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
+            for ( int i = 0; i < locations.Count; i++ )
+            {
+                var locationId = DataFaker.PickRandom( idNumbers );
+                idNumbers.Remove( locationId );
+
+                locations[i].Remove( "Id" );
+
+                UpdateDatabaseRecord( "Location", locationId, locations[i] );
+
+                Progress( i / ( double ) locations.Count, 1, stepCount );
+            }
+
+            //
+            // Step 2: Shuffle all locations with a valid GeoPoint inside our radius.
+            //
+            double radiusDistance = 35 * 1609.344;
+            var centerLocationGuid = GetGlobalAttributeValue( "OrganizationAddress" );
+            var centerLocation = new Coordinates( SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{ centerLocationGuid }'" ).First() );
+            var geoLocations = SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) < { radiusDistance }" );
+            idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
+            for ( int i = 0; i < geoLocations.Count; i++ )
+            {
+                var locationId = DataFaker.PickRandom( idNumbers );
+                idNumbers.Remove( locationId );
+
+                geoLocations[i].Remove( "Id" );
+                geoLocations[i].Add( "GeoPoint", new Coordinates( ( double ) geoLocations[i]["Lat"], ( double ) geoLocations[i]["Long"] ) );
+                geoLocations[i].Remove( "Lat" );
+                geoLocations[i].Remove( "Long" );
+
+                UpdateDatabaseRecord( "Location", locationId, geoLocations[i] );
+
+                Progress( i / ( double ) geoLocations.Count, 2, stepCount );
+            }
+
+            //
+            // Step 3: Shuffle all locations with a valid GeoPoint outside our radius.
+            //
+            geoLocations = SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) >= { radiusDistance }" );
+            idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
+            for ( int i = 0; i < geoLocations.Count; i++ )
+            {
+                var locationId = DataFaker.PickRandom( idNumbers );
+                idNumbers.Remove( locationId );
+
+                geoLocations[i].Remove( "Id" );
+                geoLocations[i].Add( "GeoPoint", new Coordinates( ( double ) geoLocations[i]["Lat"], ( double ) geoLocations[i]["Long"] ) );
+                geoLocations[i].Remove( "Lat" );
+                geoLocations[i].Remove( "Long" );
+
+                UpdateDatabaseRecord( "Location", locationId, geoLocations[i] );
+
+                Progress( i / ( double ) geoLocations.Count, 3, stepCount );
+            }
+        }
+
+        /// <summary>
         /// Empties the saved account data.
         /// </summary>
         public void EmptySavedAccountTables()

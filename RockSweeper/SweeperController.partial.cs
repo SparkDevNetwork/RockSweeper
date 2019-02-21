@@ -42,7 +42,19 @@ namespace RockSweeper
         /// <value>
         /// The Rock domain.
         /// </value>
-        public RockDomain Domain { get; private set; }
+        public RockDomain Domain
+        {
+            get
+            {
+                if ( _domain == null )
+                {
+                    _domain = new RockDomain( RockWeb );
+                }
+
+                return _domain;
+            }
+        }
+        private RockDomain _domain;
 
         /// <summary>
         /// Gets the URL to be used when requesting files from Rock.
@@ -112,7 +124,6 @@ namespace RockSweeper
         public SweeperController( string connectionString, string rockWeb )
         {
             ConnectionString = connectionString;
-            Domain = new RockDomain( rockWeb );
             RockWeb = rockWeb;
 
             var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
@@ -782,7 +793,7 @@ namespace RockSweeper
         }
 
         /// <summary>
-        /// Updates the database records in bulk.
+        /// Updates the database records in bulk. Null values are skipped, they are not set to NULL in the database.
         /// </summary>
         /// <param name="tableName">Name of the table to update.</param>
         /// <param name="records">The records to be updated.</param>
@@ -804,7 +815,10 @@ namespace RockSweeper
                         continue;
                     }
 
-                    dt.Columns.Add( k, r.Item2[k].GetType() );
+                    if ( r.Item2[k] != null )
+                    {
+                        dt.Columns.Add( k, r.Item2[k].GetType() );
+                    }
                 }
             }
 
@@ -817,7 +831,10 @@ namespace RockSweeper
                 dr["Id"] = r.Item1;
                 foreach ( var k in r.Item2.Keys )
                 {
-                    dr[k] = r.Item2[k];
+                    if ( dt.Columns.Contains( k ) )
+                    {
+                        dr[k] = r.Item2[k];
+                    }
                 }
                 dt.Rows.Add( dr );
             }
