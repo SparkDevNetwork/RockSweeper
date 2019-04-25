@@ -54,4 +54,4 @@ Many of them require you to select your RockWeb folder as well. This
 doesn't make any changes to the files on disk, but it is needed to
 properly scan the various plugins that might exist.
 
-For a full list of actions and what each one does, head over to the wiki.
+For a full list of actions and what each one does, head over to the [wiki](https://github.com/cabal95/RockSweeper/wiki/Actions).
