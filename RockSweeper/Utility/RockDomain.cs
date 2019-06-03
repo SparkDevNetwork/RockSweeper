@@ -51,7 +51,7 @@ namespace RockSweeper.Utility
             {
                 ApplicationName = "Rock",
                 ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
-                PrivateBinPath = "C:\\Users\\Daniel Hazelbaker\\Desktop\\Rockit\\RockWeb\\bin"
+                PrivateBinPath = Path.Combine( rockWebPath, "bin" )
             };
 
             Domain = AppDomain.CreateDomain( "Rock", AppDomain.CurrentDomain.Evidence, setupInfo );
