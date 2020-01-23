@@ -80,13 +80,6 @@ namespace RockSweeper
         /// </value>
         private ConcurrentDictionary<string, string> PhoneMap { get; set; }
 
-        /// <summary>
-        /// Gets the map of original login names to new scrubbed login names.
-        /// </summary>
-        /// <value>
-        /// The map of original login names to new scrubbed login names.
-        /// </value>
-        private ConcurrentDictionary<string, string> LoginMap { get; set; }
 
         /// <summary>
         /// Gets the faker object that will help generate fake data.
@@ -131,7 +124,6 @@ namespace RockSweeper
 
             EmailMap = new ConcurrentDictionary<string, string>();
             PhoneMap = new ConcurrentDictionary<string, string>();
-            LoginMap = new ConcurrentDictionary<string, string>();
 
             GeoLookupCache = new ConcurrentDictionary<string, Address>( Support.LoadGeocodeCache() );
 
@@ -226,23 +218,6 @@ namespace RockSweeper
             return email;
         }
 
-        /// <summary>
-        /// Generates the fake login for the real login.
-        /// </summary>
-        /// <param name="originalLogin">The original login.</param>
-        /// <returns></returns>
-        protected string GenerateFakeLoginForLogin( string originalLogin )
-        {
-            string login = LoginMap.GetOrAdd( originalLogin.ToLower(), ( key ) =>
-            {
-                lock ( LoginMap )
-                {
-                    return $"fakeuser{ LoginMap.Count + 1 }";
-                }
-            } );
-
-            return login;
-        }
 
         /// <summary>
         /// Generates the fake phone for the real phone number.
