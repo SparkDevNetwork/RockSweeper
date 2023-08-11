@@ -502,6 +502,18 @@ namespace RockSweeper
                         changes.Add( "NewValue", "HIDDEN" );
                     }
 
+                    // Scrub the OldValueRaw
+                    if ( history.ContainsKey( "OldValueRaw" ) && !string.IsNullOrWhiteSpace( ( string ) history["OldValueRaw"] ) )
+                    {
+                        changes.Add( "OldValueRaw", "HIDDEN" );
+                    }
+
+                    // Scrub the NewValueRaw
+                    if ( history.ContainsKey( "NewValueRaw" ) && !string.IsNullOrWhiteSpace( ( string ) history["NewValueRaw"] ) )
+                    {
+                        changes.Add( "NewValueRaw", "HIDDEN" );
+                    }
+
                     //
                     // Scrub the ValueName.
                     //
@@ -513,7 +525,7 @@ namespace RockSweeper
                     else if ( verb == "LOGIN" && history.ContainsKey( "ValueName" ) )
                     {
                         var valueName = ( string ) history["ValueName"];
-                        if ( !string.IsNullOrWhiteSpace( valueName ) && valueName.StartsWith( "fakeuser" ) )
+                        if ( !string.IsNullOrWhiteSpace( valueName ) && !valueName.StartsWith( "fakeuser" ) )
                         {
                             changes.Add( "ValueName", "HIDDEN" );
                         }
