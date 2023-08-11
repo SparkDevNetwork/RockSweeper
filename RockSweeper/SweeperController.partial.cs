@@ -7,6 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+
+using RestSharp;
+
 using RockSweeper.Utility;
 using HereRestApi = RockSweeper.External.HereRestApi;
 
@@ -300,8 +303,8 @@ namespace RockSweeper
         {
             Address address = GeoLookupCache.GetOrAdd( coordinates.ToString(), ( key ) =>
             {
-                var client = new RestSharp.RestClient( "https://reverse.geocoder.api.here.com/6.2" );
-                var req = new RestSharp.RestRequest( "reversegeocode.json" );
+                var client = new RestClient( "https://reverse.geocoder.api.here.com/6.2" );
+                var req = new RestRequest( "reversegeocode.json" );
                 req.AddParameter( "prox", coordinates.ToString() );
                 req.AddParameter( "mode", "retrieveAddresses" );
                 req.AddParameter( "maxresults", 1 );
