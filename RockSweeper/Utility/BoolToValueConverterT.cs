@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -29,4 +30,14 @@ namespace RockSweeper.Utility
     }
 
     public class BoolToBrushConverter : BoolToValueConverter<Brush> { }
+
+    public sealed class BooleanToVisibilityConverter : BoolToValueConverter<Visibility>
+    {
+        public BooleanToVisibilityConverter() :
+            base()
+        {
+            TrueValue = Visibility.Visible;
+            FalseValue = Visibility.Collapsed;
+        }
+    }
 }

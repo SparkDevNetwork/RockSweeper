@@ -1,0 +1,69 @@
+﻿<Window x:Class="RockSweeper.Dialogs.OperationProgressDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
+        mc:Ignorable="d"
+        Title="Progress" Height="410" Width="600"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="40" />
+        </Grid.ColumnDefinitions>
+
+        <ProgressBar Grid.Row="0"
+                     Grid.Column="0"
+                     Value="{Binding Progress}"
+                     Maximum="1"
+                     Height="16"
+                     Margin="10, 0, 0, 0"
+                     />
+
+        <Button Grid.Row="0"
+                Grid.Column="1"
+                ToolTip="Cancel database cleaning."
+                Visibility="{Binding CanCancel, Converter={StaticResource BoolToVis}}"
+                Background="Transparent"
+                BorderBrush="Transparent">
+            <fa:ImageAwesome Icon="StopCircleOutline"
+                             Height="20"
+                             Foreground="Red"/>
+        </Button>
+
+        <DataGrid Grid.Row="1"
+                  Grid.ColumnSpan="2"
+                  Name="dgProgress"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="None"
+                  ItemsSource="{Binding ProgressLines}">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <fa:ImageAwesome Width="12"
+                                             Height="12"
+                                             Icon="{Binding Path=Icon}"
+                                             SpinDuration="2"
+                                             Spin="{Binding Path=IsSpinning}"
+                                             Foreground="{Binding Path=Foreground}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Binding="{Binding Path=Title}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

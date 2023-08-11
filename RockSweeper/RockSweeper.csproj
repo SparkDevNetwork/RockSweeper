@@ -129,6 +129,9 @@
     </ApplicationDefinition>
     <Compile Include="Attributes\RequiresLocationServiceAttribute.cs" />
     <Compile Include="Attributes\RequiresRockWebAttribute.cs" />
+    <Compile Include="Dialogs\OperationProgressDialog.xaml.cs">
+      <DependentUpon>OperationProgressDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
     <Compile Include="Utility\BoolToValueConverterT.cs" />
@@ -138,6 +141,7 @@
     </Compile>
     <Compile Include="Extensions.cs" />
     <Compile Include="External\HereRestApi.cs" />
+    <Compile Include="Utility\ProgressEventArgs.cs" />
     <Compile Include="Utility\ProgressLine.cs" />
     <Compile Include="Utility\RockDomain.cs" />
     <Compile Include="Utility\Support.cs" />
@@ -147,9 +151,14 @@
     <Compile Include="SweeperController.RockJobs.partial.cs" />
     <Compile Include="SweeperController.Storage.partial.cs" />
     <Compile Include="SweeperController.SystemSettings.partial.cs" />
+    <Compile Include="Utility\SweeperConfiguration.cs" />
     <Compile Include="Utility\SweeperOption.cs" />
     <Compile Include="SweeperAction.cs" />
     <Compile Include="Attributes\TitleAttribute.cs" />
+    <Page Include="Dialogs\OperationProgressDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Dialogs\PreferencesDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

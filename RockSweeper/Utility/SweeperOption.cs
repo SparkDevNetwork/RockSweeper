@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using RockSweeper.Attributes;
@@ -18,6 +19,14 @@ namespace RockSweeper.Utility
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Gets the unique identifier of this option instance.
+        /// </summary>
+        /// <value>
+        /// The unique identifier of this option instance.
+        /// </value>
+        public Guid Id { get; } = Guid.NewGuid();
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is enabled.

@@ -11,17 +11,22 @@ using System.Threading;
 using RestSharp;
 
 using RockSweeper.Utility;
+
 using HereRestApi = RockSweeper.External.HereRestApi;
 
 namespace RockSweeper
 {
     public partial class SweeperController : IDisposable
     {
+        private Guid _currentOperationId = Guid.Empty;
+
+        public event EventHandler<ProgressEventArgs> OperationStarted;
+        public event EventHandler<ProgressEventArgs> ProgressChanged;
+        public event EventHandler<ProgressEventArgs> OperationCompleted;
+
         #region Properties
 
-        public Action<string> ProgressCallback { get; set; }
-
-        public CancellationToken? CancellationToken { get; set; }
+        public CancellationToken CancellationToken { get; set; }
 
         /// <summary>
         /// Gets the database connection string.
@@ -146,6 +151,34 @@ namespace RockSweeper
         #region Methods
 
         /// <summary>
+        /// Handles sweeping the database in a background thread.
+        /// </summary>
+        public void Execute( IList<SweeperOption> options )
+        {
+            for ( int i = 0; i < options.Count; i++ )
+            {
+                var option = options[i];
+                
+                _currentOperationId = option.Id;
+
+                OperationStarted?.Invoke( this, new ProgressEventArgs( option.Id, null, "Running" ) );
+
+                var methodInfo = GetType().GetMethod( option.MethodName );
+
+                if ( methodInfo == null )
+                {
+                    throw new Exception( $"Unknown sweeper method named '{option.MethodName}'" );
+                }
+
+                methodInfo.Invoke( this, new object[0] );
+
+                CancellationToken.ThrowIfCancellationRequested();
+
+                OperationCompleted?.Invoke( this, new ProgressEventArgs( option.Id, null, null ) );
+            }
+        }
+
+        /// <summary>
         /// Setups the data faker.
         /// </summary>
         protected virtual void SetupDataFaker()
@@ -181,18 +214,22 @@ namespace RockSweeper
         /// <param name="stepCount">The step count.</param>
         protected void Progress( double percentage, int? step = null, int? stepCount = null )
         {
+            ProgressEventArgs args;
+
             if ( step.HasValue && stepCount.HasValue )
             {
-                ProgressCallback?.Invoke( string.Format( "{0:0.00}% (Step {1} of {2})", percentage * 100, step, stepCount ) );
+                args = new ProgressEventArgs( _currentOperationId, percentage, $"Step {step} of {stepCount}" );
             }
             else if ( step.HasValue )
             {
-                ProgressCallback?.Invoke( string.Format( "{0:0.00}% (Step {1})", percentage * 100, step ) );
+                args = new ProgressEventArgs( _currentOperationId, percentage, $"Step {step}" );
             }
             else
             {
-                ProgressCallback?.Invoke( string.Format( "{0:0.00}%", percentage * 100 ) );
+                args = new ProgressEventArgs( _currentOperationId, percentage, null );
             }
+
+            ProgressChanged?.Invoke( this, args );
         }
 
         /// <summary>
@@ -396,7 +433,7 @@ namespace RockSweeper
                     lock ( lockObject )
                     {
                         processedItems += chunkItems.Count;
-                        progress( processedItems / ( double ) totalItems );
+                        progress( ( processedItems + 1 ) / ( double ) totalItems );
 
                         chunkItems = items.Take( chunkSize ).ToList();
                         items = items.Skip( chunkSize ).ToList();
@@ -422,7 +459,7 @@ namespace RockSweeper
             {
                 Thread.Sleep( 100 );
 
-                if ( CancellationToken?.IsCancellationRequested ?? false || tasks.Any( t => t.IsFaulted ) )
+                if ( CancellationToken.IsCancellationRequested || tasks.Any( t => t.IsFaulted ) )
                 {
                     cancelProcessTokenSource.Cancel();
                 }
@@ -1139,7 +1176,7 @@ ELSE
             string columns = string.Join( "], [", columnNames );
             var rowIds = SqlQuery<int>( $"SELECT [Id] FROM [{ tableName }] ORDER BY [Id]" );
 
-            CancellationToken?.ThrowIfCancellationRequested();
+            CancellationToken.ThrowIfCancellationRequested();
 
             ProcessItemsInParallel( rowIds, 1000, ( itemIds ) =>
             {

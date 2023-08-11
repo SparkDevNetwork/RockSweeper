@@ -25,7 +25,7 @@ namespace RockSweeper
                 Guid fileGuid = files[i].Item2;
                 string fileName = files[i].Item3;
 
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 
                 Progress( i / fileCount );
 
@@ -192,7 +192,7 @@ namespace RockSweeper
 
             foreach ( var file in files )
             {
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -304,7 +304,7 @@ namespace RockSweeper
 
             foreach ( var file in files )
             {
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -399,7 +399,7 @@ namespace RockSweeper
 
             foreach ( var file in files )
             {
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 
                 processFile( file );
 
@@ -464,7 +464,7 @@ namespace RockSweeper
 
             foreach ( var file in files )
             {
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 
                 processFile( file );
 

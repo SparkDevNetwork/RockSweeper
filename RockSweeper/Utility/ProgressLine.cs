@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 
 namespace RockSweeper.Utility
 {
@@ -46,6 +47,8 @@ namespace RockSweeper.Utility
             }
         }
 
+        public Guid OptionId { get; }
+
         /// <summary>
         /// Gets or sets the title.
         /// </summary>
@@ -58,17 +61,17 @@ namespace RockSweeper.Utility
             {
                 var title = _title;
 
+                if ( !string.IsNullOrWhiteSpace( _message ) )
+                {
+                    title += $" {_message}";
+                }
+
                 if ( _progress.HasValue )
                 {
                     title += string.Format( " {0:0.00}%", _progress );
                 }
 
                 return title;
-            }
-            set
-            {
-                _title = value;
-                NotifyPropertyChanged( "Title" );
             }
         }
         private string _title;
@@ -140,7 +143,7 @@ namespace RockSweeper.Utility
                 NotifyPropertyChanged( "IsSpinning" );
             }
         }
-        ProgressLineState _state;
+        ProgressLineState _state = ProgressLineState.Pending;
 
         /// <summary>
         /// Gets or sets the progress.
@@ -159,7 +162,24 @@ namespace RockSweeper.Utility
         }
         private double? _progress;
 
+        public string Message
+        {
+            get => _message;
+            set
+            {
+                _message = value;
+                NotifyPropertyChanged( nameof( Message ) );
+            }
+        }
+        private string _message = string.Empty;
+
         #endregion
+
+        public ProgressLine( Guid id, string title )
+        {
+            OptionId = id;
+            _title = title;
+        }
 
         #region Methods
 

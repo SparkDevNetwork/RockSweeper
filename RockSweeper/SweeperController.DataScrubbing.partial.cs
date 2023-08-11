@@ -1284,7 +1284,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 var state = ( string ) geoLocations[i]["State"];
                 var country = ( string ) geoLocations[i]["Country"];
 
-                CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
                 step2Changes.Clear();
 
                 var coordinates = new Coordinates( latitude, longitude ).CoordinatesByAdjusting( adjustCoordinates.Latitude, adjustCoordinates.Longitude );
