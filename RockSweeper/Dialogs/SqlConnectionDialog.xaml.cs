@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,6 +22,10 @@ namespace RockSweeper.Dialogs
 
         protected const string SqlServerAuthentication = "SQL Server Authentication";
 
+        private bool useConnectionString = true;
+
+        private bool useParameters;
+
         private string serverName;
 
         private string databaseName;
@@ -28,6 +33,8 @@ namespace RockSweeper.Dialogs
         private string authentication;
 
         private string userName;
+
+        private string connectionString;
 
         #endregion
 
@@ -41,6 +48,42 @@ namespace RockSweeper.Dialogs
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Gets or sets a value that determines if we are using a typed
+        /// in connection string.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if the dialog will construct the connection string from parameters.
+        /// </value>
+        public bool UseConnectionString
+        {
+            get => useConnectionString;
+            set
+            {
+                useConnectionString = value;
+                OnPropertyChanged();
+                NotifyIsValid();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value that determines if we are using individual
+        /// SQL parameters when constructing the connection string.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if the dialog will construct the connection string from parameters.
+        /// </value>
+        public bool UseParameters
+        {
+            get => useParameters;
+            set
+            {
+                useParameters = value;
+                OnPropertyChanged();
+                NotifyIsValid();
+            }
+        }
 
         /// <summary>
         /// Gets or sets the name of the server.
@@ -156,32 +199,14 @@ namespace RockSweeper.Dialogs
         /// <value>
         /// The connection string.
         /// </value>
-        public virtual string ConnectionString
+        public string ConnectionString
         {
-            get
+            get => connectionString;
+            set
             {
-                if ( !IsValid )
-                {
-                    return string.Empty;
-                }
-
-                var builder = new SqlConnectionStringBuilder
-                {
-                    DataSource = ServerName,
-                    InitialCatalog = DatabaseName
-                };
-
-                if ( Authentication == WindowsAuthentication )
-                {
-                    builder.IntegratedSecurity = true;
-                }
-                else
-                {
-                    builder.UserID = UserName;
-                    builder.Password = PasswordBox.Password;
-                }
-
-                return builder.ConnectionString;
+                connectionString = value;
+                OnPropertyChanged();
+                NotifyIsValid();
             }
         }
 
@@ -221,7 +246,7 @@ namespace RockSweeper.Dialogs
             ServerNameComboBox.Focus();
             PasswordBox.PasswordChanged += ( sender, args ) =>
             {
-                OnPropertyChanged( "IsValid" );
+                OnPropertyChanged( nameof( IsValid ) );
             };
         }
 
@@ -230,8 +255,8 @@ namespace RockSweeper.Dialogs
         /// </summary>
         protected virtual void NotifyIsValid()
         {
-            OnPropertyChanged( "IsValid" );
-            OnPropertyChanged( "IsCredentialInputEnabled" );
+            OnPropertyChanged( nameof( IsValid ) );
+            OnPropertyChanged( nameof( IsCredentialInputEnabled ) );
         }
 
         /// <summary>
@@ -240,6 +265,16 @@ namespace RockSweeper.Dialogs
         /// <returns>true if the values are correct.</returns>
         protected virtual bool Validate()
         {
+            if ( UseConnectionString )
+            {
+                if ( string.IsNullOrWhiteSpace( ConnectionString ) )
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
             if ( string.IsNullOrWhiteSpace( ServerName ) )
             {
                 return false;
@@ -265,9 +300,45 @@ namespace RockSweeper.Dialogs
         /// Called when the named property changes.
         /// </summary>
         /// <param name="propertyName">Name of the property.</param>
-        protected virtual void OnPropertyChanged( string propertyName = null )
+        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+        }
+
+        /// <summary>
+        /// Gets the connection string that represents the current state of
+        /// the dialog.
+        /// </summary>
+        /// <returns>A SQL connection string or an emptys tring.</returns>
+        public string GetConnectionString()
+        {
+            if ( !IsValid )
+            {
+                return string.Empty;
+            }
+
+            if ( UseConnectionString )
+            {
+                return ConnectionString;
+            }
+
+            var builder = new SqlConnectionStringBuilder
+            {
+                DataSource = ServerName,
+                InitialCatalog = DatabaseName
+            };
+
+            if ( Authentication == WindowsAuthentication )
+            {
+                builder.IntegratedSecurity = true;
+            }
+            else
+            {
+                builder.UserID = UserName;
+                builder.Password = PasswordBox.Password;
+            }
+
+            return builder.ConnectionString;
         }
 
         #endregion
@@ -323,7 +394,7 @@ namespace RockSweeper.Dialogs
             {
                 Cursor = Cursors.Wait;
 
-                using ( var connection = new SqlConnection( this.ConnectionString ) )
+                using ( var connection = new SqlConnection( GetConnectionString() ) )
                 {
                     connection.Open();
                     connection.Close();

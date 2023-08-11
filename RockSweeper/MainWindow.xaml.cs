@@ -385,7 +385,7 @@ namespace RockSweeper
                 return;
             }
 
-            ConnectionString = dialog.ConnectionString;
+            ConnectionString = dialog.GetConnectionString();
 
             var builder = new SqlConnectionStringBuilder( ConnectionString );
             SqlDatabaseName = $"{ builder.DataSource }\\{ builder.InitialCatalog }";

@@ -3,13 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:RockSweeper.Dialogs"
         mc:Ignorable="d"
         Title="SqlConnectionDialog" Height="250" Width="400"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        
         <Style x:Key="LabelStyle" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -19,27 +20,24 @@
 
         <Style x:Key="ComboboxFieldStyle" TargetType="ComboBox">
             <Setter Property="Height" Value="20"/>
-            <Setter Property="Width" Value="200"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style x:Key="TextBoxStyle" TargetType="TextBox">
             <Setter Property="Height" Value="20"/>
-            <Setter Property="Width" Value="200"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style x:Key="PasswordStyle" TargetType="PasswordBox">
             <Setter Property="Height" Value="20"/>
-            <Setter Property="Width" Value="200"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="11"/>
         </Style>
@@ -53,11 +51,15 @@
     </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="5"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Height="Auto" Margin="0,0,0,10" VerticalAlignment="Top">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+            <RadioButton IsChecked="{Binding UseConnectionString}" GroupName="ConnectionType" Content="Connection String" Margin="0, 0, 5, 10" />
+            <RadioButton IsChecked="{Binding UseParameters}" GroupName="ConnectionType" Content="Parameters" Margin="5, 0, 0, 10"/>
+        </StackPanel>
+        <Grid Grid.Row="1" Height="Auto" Visibility="{Binding Path=UseParameters, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10" VerticalAlignment="Top">
             <Grid.RowDefinitions>
                 <RowDefinition Height="24" />
                 <RowDefinition Height="24" />
@@ -110,8 +112,26 @@
                          Grid.Column="1"
                          Style="{StaticResource PasswordStyle}"/>
         </Grid>
-        <Separator VerticalAlignment="Top" Grid.Row="1"/>
-        <Grid Grid.Row="2" Margin="0,10,0,3">
+
+        <Grid Grid.Row="1" Height="Auto" Visibility="{Binding Path=UseConnectionString, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10" VerticalAlignment="Top">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="24" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Grid.Row="0" Text="Connection string:" Style="{StaticResource LabelStyle}"/>
+
+            <TextBox Text="{Binding ConnectionString, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}" 
+                     TabIndex="1"
+                     Grid.Row="1"
+                     Grid.Column="1"
+                     Style="{StaticResource TextBoxStyle}"/>
+        </Grid>
+
+        <Separator Grid.Row="2" VerticalAlignment="Bottom" Margin="0, 0, 0, 35"/>
+        <Grid Grid.Row="2" Margin="0,10,0,3" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
