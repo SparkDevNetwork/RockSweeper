@@ -1520,8 +1520,15 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             //
             double radiusDistance = 35 * 1609.344;
             var centerLocationGuid = GetGlobalAttributeValue( "OrganizationAddress" );
-            var centerLocation = new Coordinates( SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{ centerLocationGuid }'" ).First() );
-            var geoLocations = SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) < { radiusDistance }" );
+            var centerLocationValues = SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" );
+            var centerLocation = centerLocationValues.Any()
+                ? new Coordinates( SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ).First() )
+                : null;
+
+            var geoLocations = centerLocation != null
+                ? SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" )
+                : new List<Dictionary<string, object>>();
+
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
             for ( int i = 0; i < geoLocations.Count; i++ )
             {
@@ -1541,7 +1548,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             //
             // Step 3: Shuffle all locations with a valid GeoPoint outside our radius.
             //
-            geoLocations = SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({ centerLocation.Latitude }, { centerLocation.Longitude }, 4326).STDistance([GeoPoint]) >= { radiusDistance }" );
+            geoLocations = centerLocation != null
+                ? SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" )
+                : new List<Dictionary<string, object>>();
+
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
             for ( int i = 0; i < geoLocations.Count; i++ )
             {

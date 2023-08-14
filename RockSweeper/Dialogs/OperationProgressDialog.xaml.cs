@@ -69,6 +69,8 @@ namespace RockSweeper.Dialogs
 
                 Dispatcher.Invoke( () =>
                 {
+                    _viewModel.CanCancel = false;
+
                     var progressLine = _viewModel.ProgressLines
                         .FirstOrDefault( p => p.State == ProgressLineState.Processing );
 
