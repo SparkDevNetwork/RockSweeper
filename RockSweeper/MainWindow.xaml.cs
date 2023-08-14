@@ -114,16 +114,31 @@ namespace RockSweeper
         {
             InitializeComponent();
 
-            //
-            // Initialize all the possible options.
-            //
-            typeof( SweeperController )
+            // Initialize all the possible actions.
+            var actions = typeof( SweeperController )
                 .GetMethods()
                 .Where( m => m.GetCustomAttribute<ActionIdAttribute>() != null )
                 .Select( m => new SweeperAction( m ) )
-                .ToList()
-                .ForEach( a => ConfigOptions.Add( new SweeperOption( a ) ) );
+                .ToList();
 
+            // Make sure all conflicts go both ways.
+            foreach ( var action in actions )
+            {
+                var conflictingWithMe = actions
+                    .Where( a => a.ConflictingActions.Contains( action.Id ) )
+                    .Select( a => a.Id )
+                    .ToList();
+
+                if ( conflictingWithMe.Any() )
+                {
+                    action.AddConflicts( conflictingWithMe );
+                }
+            }
+
+            // Initialize all UI options.
+            actions.ForEach( a => ConfigOptions.Add( new SweeperOption( a ) ) );
+
+            // Listen for any changes to update states.
             foreach ( var option in ConfigOptions )
             {
                 option.PropertyChanged += Option_PropertyChanged;
@@ -270,7 +285,12 @@ namespace RockSweeper
         {
             foreach ( var option in ConfigOptions )
             {
-                option.Selected = true;
+                //var hasConflict = ConfigOptions.Any( o => option.ConflictingActions.Contains( o.Id ) );
+
+                if ( option.Enabled && !option.Conflicted )
+                {
+                    option.Selected = true;
+                }
             }
         }
 

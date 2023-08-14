@@ -137,5 +137,18 @@ namespace RockSweeper
         }
 
         #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Adds additional conflicts to this action.
+        /// </summary>
+        /// <param name="conflictingIds">The identifiers that conflict with this action.</param>
+        public void AddConflicts( IEnumerable<Guid> conflictingIds )
+        {
+            ( ( List<Guid> ) ConflictingActions ).AddRange( conflictingIds );
+        }
+
+        #endregion
     }
 }
