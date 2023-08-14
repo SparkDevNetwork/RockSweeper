@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Windows;
 
+using RockSweeper.Attributes;
 using RockSweeper.Dialogs;
 using RockSweeper.Utility;
 
@@ -118,14 +117,19 @@ namespace RockSweeper
             //
             // Initialize all the possible options.
             //
-            Enum.GetValues( typeof( SweeperAction ) )
-                .Cast<SweeperAction>()
-                .Select( a => new SweeperOption( a ) )
-                .OrderBy( o => o.Category == "Data Scrubbing" )
-                .ThenBy( o => o.Category )
-                .ThenBy( o => ( int ) o.Action )
+            typeof( SweeperController )
+                .GetMethods()
+                .Where( m => m.GetCustomAttribute<ActionIdAttribute>() != null )
+                .Select( m => new SweeperAction( m ) )
                 .ToList()
-                .ForEach( o => ConfigOptions.Add( o ) );
+                .ForEach( a => ConfigOptions.Add( new SweeperOption( a ) ) );
+
+            foreach ( var option in ConfigOptions )
+            {
+                option.PropertyChanged += Option_PropertyChanged;
+            }
+
+            UpdateConflictingStates();
             UpdateOptionStates();
 
             DataContext = this;
@@ -149,17 +153,40 @@ namespace RockSweeper
         /// </summary>
         protected void UpdateOptionStates()
         {
-
             foreach ( var option in ConfigOptions )
             {
                 bool hasDatabase = !string.IsNullOrWhiteSpace( SqlDatabaseName );
                 bool hasRockWeb = !string.IsNullOrWhiteSpace( RockWebFolder );
                 bool hasLocationServices = !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppCode ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppId ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.TargetGeoCenter );
 
-                option.Enabled = hasDatabase;
+                option.Enabled = !option.Conflicted && hasDatabase;
                 option.Enabled = option.Enabled && ( !option.RequiresRockWeb || hasRockWeb );
                 option.Enabled = option.Enabled && ( !option.RequiresLocationServices || hasLocationServices );
             }
+        }
+
+        protected void UpdateConflictingStates()
+        {
+            var conflictingIds = ConfigOptions.Where( o => o.Selected )
+                .SelectMany( o => o.ConflictingActions )
+                .ToList();
+
+            foreach ( var option in ConfigOptions )
+            {
+                option.Conflicted = conflictingIds.Contains( option.Id );
+            }
+
+            // If anything is in a selected and conflicted state, just reset it all.
+            if ( ConfigOptions.Any( o => o.Selected && o.Conflicted ) )
+            {
+                foreach ( var option in ConfigOptions )
+                {
+                    option.Conflicted = false;
+                    option.Selected = false;
+                }
+            }
+
+            UpdateOptionStates();
         }
 
         #endregion
@@ -257,6 +284,19 @@ namespace RockSweeper
             foreach ( var option in ConfigOptions )
             {
                 option.Selected = false;
+            }
+        }
+
+        /// <summary>
+        /// Handles the PropertyChanged event of the option.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="PropertyChangedEventArgs"/> instance containing the event data.</param>
+        private void Option_PropertyChanged( object sender, PropertyChangedEventArgs e )
+        {
+            if ( e.PropertyName == nameof( SweeperOption.Selected ) )
+            {
+                UpdateConflictingStates();
             }
         }
 

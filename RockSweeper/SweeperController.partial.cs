@@ -163,14 +163,7 @@ namespace RockSweeper
 
                 OperationStarted?.Invoke( this, new ProgressEventArgs( option.Id, null, "Running" ) );
 
-                var methodInfo = GetType().GetMethod( option.MethodName );
-
-                if ( methodInfo == null )
-                {
-                    throw new Exception( $"Unknown sweeper method named '{option.MethodName}'" );
-                }
-
-                methodInfo.Invoke( this, new object[0] );
+                option.Method.Invoke( this, new object[0] );
 
                 CancellationToken.ThrowIfCancellationRequested();
 

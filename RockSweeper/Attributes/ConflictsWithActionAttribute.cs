@@ -3,10 +3,10 @@
 namespace RockSweeper.Attributes
 {
     [AttributeUsage( AttributeTargets.Method, AllowMultiple = true )]
-    public class AfterActionAttribute : Attribute
+    public class ConflictsWithActionAttribute : Attribute
     {
         /// <summary>
-        /// Gets the action method name that this action is to be run after.
+        /// Gets the action method name that this action conflicts with.
         /// </summary>
         /// <value>
         /// The action to be run after.
@@ -17,7 +17,7 @@ namespace RockSweeper.Attributes
         /// Initializes a new instance of the <see cref="AfterActionAttribute"/> class.
         /// </summary>
         /// <param name="actionMethodName">The name of the action method.</param>
-        public AfterActionAttribute( string methodName )
+        public ConflictsWithActionAttribute( string methodName )
         {
             MethodName = methodName;
         }

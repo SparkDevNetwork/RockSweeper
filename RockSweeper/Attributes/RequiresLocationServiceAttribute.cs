@@ -2,7 +2,7 @@
 
 namespace RockSweeper.Attributes
 {
-    [AttributeUsage( AttributeTargets.Field )]
+    [AttributeUsage( AttributeTargets.Method )]
     public class RequiresLocationServiceAttribute : Attribute
     {
         /// <summary>

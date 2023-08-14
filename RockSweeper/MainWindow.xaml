@@ -123,7 +123,6 @@
                                 <CheckBox HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
                                           IsChecked="{Binding Path=Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          IsThreeState="True"
                                           IsEnabled="{Binding Path=Enabled}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

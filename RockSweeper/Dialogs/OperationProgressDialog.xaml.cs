@@ -45,7 +45,7 @@ namespace RockSweeper.Dialogs
             var orderedOptions = _configuration.Options.OrderBy( o => o.RunAfterActions.Count )
                 .TopologicalSort( ( o ) =>
                 {
-                    return _configuration.Options.Where( oo => o.RunAfterActions.Contains( oo.Action ) );
+                    return _configuration.Options.Where( oo => o.RunAfterActions.Contains( oo.Id ) );
                 } )
                 .ToList();
 

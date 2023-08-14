@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+
+using RockSweeper.Attributes;
 
 namespace RockSweeper
 {
@@ -12,6 +15,10 @@ namespace RockSweeper
         /// Moves all the binary files into database.
         /// </summary>
         /// <param name="actionData">The action data.</param>
+        [ActionId( "abbe9ca5-6915-4e40-95b4-9c485c09f382" )]
+        [Title( "Move Binary Files Into Database" )]
+        [Description( "Moves any binary file data stored externally into the database, this includes any filesystem storage." )]
+        [Category( "Storage" )]
         public void MoveBinaryFilesIntoDatabase()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -48,10 +55,25 @@ namespace RockSweeper
             }
         }
 
+        [ActionId( "6be04438-0725-4ec6-b5be-adc2a03ab028" )]
+        [Title( "Convert Binary Files to Database Placeholders" )]
+        [Description( "Converts binary files stored in the database to placeholder data and then converts any non-database storage files to be placeholders stored in the database." )]
+        [Category( "Storage" )]
+        [ConflictsWithAction( nameof( MoveBinaryFilesIntoDatabase ) )]
+        public void ConvertBinaryFilesToDatabasePlaceholders()
+        {
+
+        }
+
         /// <summary>
         /// Replaces the database images with correctly sized placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
+        [ActionId( "b18bf1ae-b391-4b71-8c4a-f88afe457f1d" )]
+        [Title( "Replace Database Images With Sized Placeholders" )]
+        [Description( "Replaces any database-stored PNG or JPG files with correctly sized placeholders." )]
+        [Category( "Storage" )]
+        [AfterAction( nameof( MoveBinaryFilesIntoDatabase ) )]
         public void ReplaceDatabaseImagesWithSizedPlaceholders()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -209,6 +231,11 @@ namespace RockSweeper
         /// Replaces the database images with empty placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
+        [ActionId( "99fb22cf-94cd-4f44-95e3-142d54a176e1" )]
+        [Title( "Replace Database Images With Empty Placeholders" )]
+        [Description( "Replaces any database-stored PNG or JPG files with 1x1 pixel placeholders." )]
+        [Category( "Storage" )]
+        [AfterAction( nameof( MoveBinaryFilesIntoDatabase ) )]
         public void ReplaceDatabaseImagesWithEmptyPlaceholders()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -321,6 +348,11 @@ namespace RockSweeper
         /// Replaces the database documents with sized placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
+        [ActionId( "56e602d7-a9a4-4a4d-99bb-2df5e11a4404" )]
+        [Title( "Replace Database Documents With Sized Placeholders" )]
+        [Description( "Replaces any database-stored non-PNG and non-JPG files with placeholder text of the original file size." )]
+        [Category( "Storage" )]
+        [AfterAction( nameof( MoveBinaryFilesIntoDatabase ) )]
         public void ReplaceDatabaseDocumentsWithSizedPlaceholders()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
@@ -416,6 +448,11 @@ namespace RockSweeper
         /// Replaces the database documents with empty placeholders.
         /// </summary>
         /// <param name="actionData">The action data.</param>
+        [ActionId( "f3e7806e-8142-4825-b3f4-70e71462dda5" )]
+        [Title( "Replace Database Documents With Empty Placeholders" )]
+        [Description( "Replaces any database-stored non-PNG and non-JPG files with empty file content." )]
+        [Category( "Storage" )]
+        [AfterAction( nameof( MoveBinaryFilesIntoDatabase ) )]
         public void ReplaceDatabaseDocumentsWithEmptyPlaceholders()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );

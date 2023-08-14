@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+
+using RockSweeper.Attributes;
 using RockSweeper.Utility;
 
 namespace RockSweeper
@@ -305,6 +308,10 @@ namespace RockSweeper
         /// <summary>
         /// Generates the random email addresses.
         /// </summary>
+        [ActionId( "7d14924a-b367-4495-b480-96b86bcf712b" )]
+        [Title( "Generate Random Email Addresses" )]
+        [Description( "Replaces any e-mail addresses found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
         public void GenerateRandomEmailAddresses()
         {
             var scrubTables = ScrubMergeTableDictionaries( _scrubCommonTables, _scrubEmailTables );
@@ -402,6 +409,10 @@ namespace RockSweeper
         /// <summary>
         /// Empties the analytics source tables.
         /// </summary>
+        [ActionId( "8b6a47eb-006a-4734-a876-94f20b43b994" )]
+        [Title( "Empty Analytics Source Tables" )]
+        [Description( "Truncates the AnalyticsSource* tables so they contain no data." )]
+        [Category( "Data Scrubbing" )]
         public void EmptyAnalyticsSourceTables()
         {
             var tables = SqlQuery<string>( "SELECT [name] FROM sys.all_objects WHERE [type_desc] = 'USER_TABLE' AND [name] LIKE 'AnalyticsSource%'" );
@@ -415,6 +426,11 @@ namespace RockSweeper
         /// <summary>
         /// Inserts the history placeholders.
         /// </summary>
+        [ActionId( "5cdcf31e-382f-4663-ad26-122814990187" )]
+        [Title( "Insert History Placeholders" )]
+        [Description( "Modifies all History records to remove any identifying information." )]
+        [Category( "Data Scrubbing" )]
+        [AfterAction( nameof( GenerateRandomLogins ) )]
         public void InsertHistoryPlaceholders()
         {
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
@@ -552,6 +568,10 @@ namespace RockSweeper
         /// <summary>
         /// Generates the random logins.
         /// </summary>
+        [ActionId( "304cf8ff-a70d-4de1-95d0-e4262cf1bfeb" )]
+        [Title( "Generate Random Logins" )]
+        [Description( "Replaces any login names found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
         public void GenerateRandomLogins()
         {
             var logins = SqlQuery<int, string>( "SELECT [Id], [UserName] FROM [UserLogin]" );
@@ -586,6 +606,11 @@ namespace RockSweeper
         /// <summary>
         /// Clears the background check response data.
         /// </summary>
+        [ActionId( "38c0aa94-f914-470a-9be1-ea3b6da14d41" )]
+        [Title( "Sanitize Background Check Data" )]
+        [Description( "Clears as much sensitive information from background checks as possible." )]
+        [Category( "Data Scrubbing" )]
+        [AfterAction( nameof( GenerateRandomNames ) )]
         public void SanitizeBackgroundCheckData()
         {
             int stepCount = 5;
@@ -646,6 +671,10 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
         /// <summary>
         /// Generates the random phone numbers.
         /// </summary>
+        [ActionId( "46f34fe1-4577-425d-9cdf-cf54da349365" )]
+        [Title( "Generate Random Phone Numbers" )]
+        [Description( "Replaces any phone numbers found in the system with generated values." )]
+        [Category( "Data Scrubbing" )]
         public void GenerateRandomPhoneNumbers()
         {
             var scrubTables = ScrubMergeTableDictionaries( _scrubCommonTables, _scrubPhoneTables );
@@ -756,6 +785,10 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
         /// <summary>
         /// Sanitizes the benevolence request data.
         /// </summary>
+        [ActionId( "944fea3a-7826-4e9b-9539-eae3f26fa2ac" )]
+        [Title( "Sanitize Benevolence Request Data" )]
+        [Description( "Scrubs out any government IDs as well as request and result text." )]
+        [Category( "Data Scrubbing" )]
         public void SanitizeBenevolenceRequestData()
         {
             var queryData = SqlQuery<int, string, string, string>( "SELECT [Id],[GovernmentId],[RequestText],[ResultSummary] FROM [BenevolenceRequest]" );
@@ -802,6 +835,10 @@ WHERE W.[WorkflowTypeId] = { workflowTypeId }
         /// <summary>
         /// Generates the random names.
         /// </summary>
+        [ActionId( "d000b0a2-c318-4d72-93df-ed60dd3a015c" )]
+        [Title( "Generate Random Names" )]
+        [Description( "Replaces any person names with randomized names." )]
+        [Category( "Data Scrubbing" )]
         public void GenerateRandomNames()
         {
             var processedPersonIds = new List<int>();
@@ -1116,6 +1153,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Sanitizes the devices.
         /// </summary>
+        [ActionId( "d23bfc10-7c58-4f9c-8497-553a6a5c7c1c" )]
+        [Title( "Sanitize Devices" )]
+        [Description( "Replacing IPAddress with fake address information." )]
+        [Category( "Data Scrubbing" )]
         public void SanitizeDevices()
         {
             var devices = SqlQuery<int, string>( "SELECT [Id], [IPAddress] FROM [Device]" );
@@ -1148,6 +1189,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Sanitizes the content channel items.
         /// </summary>
+        [ActionId( "6ecb7b00-e1ed-44e9-b24e-e4beffbac9f3" )]
+        [Title( "Sanitize Content Channel Items" )]
+        [Description( "Replaces content channel item content with ipsum text." )]
+        [Category( "Data Scrubbing" )]
         public void SanitizeContentChannelItems()
         {
             var contentChannelItems = SqlQuery<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
@@ -1182,6 +1227,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Scrubs the workflow log.
         /// </summary>
+        [ActionId( "d6a36aad-f7ba-4ada-b018-f6aa4065f6bf" )]
+        [Title( "Scrub Workflow Log" )]
+        [Description( "Modifies the log text to only include the activity and action and not the specific action text." )]
+        [Category( "Data Scrubbing" )]
         public void ScrubWorkflowLog()
         {
             ScrubTableTextColumn( "WorkflowLog", "LogText", ( s ) =>
@@ -1206,6 +1255,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Generates the organization and campuses.
         /// </summary>
+        [ActionId( "7a047807-1a42-413e-899a-b2a1fc90a889" )]
+        [Title( "Generate Organization and Campuses" )]
+        [Description( "Scrubs the organization name and URL as well as campus names and URLs." )]
+        [Category( "Data Scrubbing" )]
         public void GenerateOrganizationAndCampuses()
         {
             string organizationCity = DataFaker.Address.City();
@@ -1239,6 +1292,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Sanitizes the interaction data.
         /// </summary>
+        [ActionId( "31200ef0-cad7-4775-8be8-c1a06a591e3f" )]
+        [Title( "Sanitize Interaction Data" )]
+        [Description( "Removes all custom data from Interactions, InteractionComponents and InteractionChannels." )]
+        [Category( "Data Scrubbing" )]
         public void SanitizeInteractionData()
         {
             SqlCommand( "UPDATE [InteractionChannel] SET [ChannelData] = NULL" );
@@ -1249,6 +1306,11 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Generates random location addresses.
         /// </summary>
+        [ActionId( "5b110e1e-dde1-49e2-922e-c604083e8679" )]
+        [Title( "Generate Random Location Addresses" )]
+        [Description( "Generates random addresses in the database, centered around Phoenix, AZ." )]
+        [Category( "Data Scrubbing" )]
+        [RequiresLocationService]
         public void GenerateRandomLocationAddresses()
         {
             int stepCount = 3;
@@ -1420,6 +1482,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Shuffles the location addresses.
         /// </summary>
+        [ActionId( "8b164228-50a7-4abe-8769-096ea5157a88" )]
+        [Title( "Shuffle Location Addresses" )]
+        [Description( "Takes the location addresses in the database and shuffles them all around." )]
+        [Category( "Data Scrubbing" )]
         public void ShuffleLocationAddresses()
         {
             List<int> idNumbers;
@@ -1489,6 +1555,10 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// <summary>
         /// Empties the saved account data.
         /// </summary>
+        [ActionId( "702834d4-ca31-4ddb-bbac-ce629edbb82d" )]
+        [Title( "Empty Saved Account Tables" )]
+        [Description( "Clears the saved bank account and saved CC account tables." )]
+        [Category( "Data Scrubbing" )]
         public void EmptySavedAccountTables()
         {
             SqlCommand( "TRUNCATE TABLE [FinancialPersonBankAccount]" );

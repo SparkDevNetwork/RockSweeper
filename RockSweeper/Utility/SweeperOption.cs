@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using RockSweeper.Attributes;
+using System.Reflection;
 
 namespace RockSweeper.Utility
 {
@@ -12,8 +11,18 @@ namespace RockSweeper.Utility
     /// <seealso cref="System.ComponentModel.INotifyPropertyChanged" />
     public class SweeperOption : INotifyPropertyChanged
     {
+        #region Fields
+
+        /// <summary>
+        /// The backing field for the action.
+        /// </summary>
+        private readonly SweeperAction _action;
+
+        #endregion
+
         #region Events
 
+        /// <inheritdoc/>
         public event PropertyChangedEventHandler PropertyChanged;
 
         #endregion
@@ -26,7 +35,79 @@ namespace RockSweeper.Utility
         /// <value>
         /// The unique identifier of this option instance.
         /// </value>
-        public Guid Id { get; } = Guid.NewGuid();
+        public Guid Id => _action.Id;
+
+        /// <summary>
+        /// Gets the title.
+        /// </summary>
+        /// <value>
+        /// The title.
+        /// </value>
+        public string Title => _action.Title;
+
+        /// <summary>
+        /// Gets the category.
+        /// </summary>
+        /// <value>
+        /// The category.
+        /// </value>
+        public string Category => _action.Category;
+
+        /// <summary>
+        /// Gets the tooltip description.
+        /// </summary>
+        /// <value>
+        /// The tooltip description.
+        /// </value>
+        public string Description => _action.Description;
+
+        /// <summary>
+        /// Gets the name of the method to be called.
+        /// </summary>
+        /// <value>
+        /// The name of the method to be called.
+        /// </value>
+        public MethodInfo Method => _action.Method;
+
+        /// <summary>
+        /// Gets the full display name.
+        /// </summary>
+        /// <value>
+        /// The full display name.
+        /// </value>
+        public string FullName => $"{Category} >> {Title}";
+
+        /// <summary>
+        /// Gets a value indicating whether the RockWeb folder is required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresRockWeb => _action.RequiresRockWeb;
+
+        /// <summary>
+        /// Gets a value indicating whether location services are required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if location services are required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresLocationServices => _action.RequiresLocationServices;
+
+        /// <summary>
+        /// Gets the actions that this option must run after.
+        /// </summary>
+        /// <value>
+        /// The actions that this option must run after.
+        /// </value>
+        public ICollection<Guid> RunAfterActions => _action.RunAfterActions;
+
+        /// <summary>
+        /// Gets the actions that this option conflicts with.
+        /// </summary>
+        /// <value>
+        /// The actions that this option conflicts with.
+        /// </value>
+        public ICollection<Guid> ConflictingActions => _action.ConflictingActions;
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is enabled.
@@ -63,84 +144,13 @@ namespace RockSweeper.Utility
         private bool _selected;
 
         /// <summary>
-        /// Gets the title.
+        /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is
+        /// in conflict with another option.
         /// </summary>
         /// <value>
-        /// The title.
+        /// <c>true</c> if conflicted; otherwise <c>false</c>.
         /// </value>
-        public string Title => GetActionAttribute<TitleAttribute>( Action )?.Title ?? Action.ToString();
-
-        /// <summary>
-        /// Gets the category.
-        /// </summary>
-        /// <value>
-        /// The category.
-        /// </value>
-        public string Category => GetActionAttribute<CategoryAttribute>( Action )?.Category ?? "General";
-
-        /// <summary>
-        /// Gets the tooltip description.
-        /// </summary>
-        /// <value>
-        /// The tooltip description.
-        /// </value>
-        public string Description => GetActionAttribute<DescriptionAttribute>( Action )?.Description ?? string.Empty;
-
-        /// <summary>
-        /// Gets the name of the method to be called.
-        /// </summary>
-        /// <value>
-        /// The name of the method to be called.
-        /// </value>
-        public string MethodName => Action.ToString();
-
-        /// <summary>
-        /// Gets the full display name.
-        /// </summary>
-        /// <value>
-        /// The full display name.
-        /// </value>
-        public string FullName => $"{ Category } >> { Title }";
-
-        /// <summary>
-        /// Gets a value indicating whether the RockWeb folder is required.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
-        /// </value>
-        public bool RequiresRockWeb => GetActionAttribute<RequiresRockWebAttribute>( Action ) != null;
-
-        /// <summary>
-        /// Gets a value indicating whether location services are required.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if location services are required; otherwise, <c>false</c>.
-        /// </value>
-        public bool RequiresLocationServices => GetActionAttribute<RequiresLocationServiceAttribute>( Action ) != null;
-
-        /// <summary>
-        /// Gets or sets the action.
-        /// </summary>
-        /// <value>
-        /// The action.
-        /// </value>
-        public SweeperAction Action { get; private set; }
-
-        /// <summary>
-        /// Gets the actions that this option must run after.
-        /// </summary>
-        /// <value>
-        /// The actions that this option must run after.
-        /// </value>
-        public ICollection<SweeperAction> RunAfterActions
-        {
-            get
-            {
-                return GetActionAttributes<AfterActionAttribute>( Action )
-                    .Select( a => a.Action )
-                    .ToList();
-            }
-        }
+        public bool Conflicted { get; set; }
 
         #endregion
 
@@ -152,54 +162,13 @@ namespace RockSweeper.Utility
         /// <param name="action">The action.</param>
         public SweeperOption( SweeperAction action )
         {
-            Action = action;
-
-            var defaultValue = GetActionAttribute<DefaultValueAttribute>( action );
-            if ( defaultValue != null )
-            {
-                Selected = (bool)defaultValue.Value;
-            }
+            _action = action;
+            Selected = _action.SelectedByDefault;
         }
 
         #endregion
 
         #region Methods
-
-        /// <summary>
-        /// Gets the action attribute.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="action">The action.</param>
-        /// <returns></returns>
-        protected T GetActionAttribute<T>( SweeperAction action )
-        {
-            var memberInfo = action.GetType().GetMember( action.ToString() ).FirstOrDefault();
-
-            if ( memberInfo != null )
-            {
-                return (T)memberInfo.GetCustomAttributes( typeof( T ), false ).SingleOrDefault();
-            }
-
-            return default( T );
-        }
-
-        /// <summary>
-        /// Gets the action attributes.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="action">The action.</param>
-        /// <returns></returns>
-        protected ICollection<T> GetActionAttributes<T>( SweeperAction action )
-        {
-            var memberInfo = action.GetType().GetMember( action.ToString() ).FirstOrDefault();
-
-            if ( memberInfo != null )
-            {
-                return memberInfo.GetCustomAttributes( typeof( T ), false ).Cast<T>().ToList();
-            }
-
-            return new List<T>();
-        }
 
         /// <summary>
         /// Notifies the property changed.
