@@ -55,6 +55,8 @@ namespace RockSweeper.Dialogs
                     .Select( o => new ProgressLine( o.Id, o.Title ) )
                     .ToList()
                     .ForEach( p => _viewModel.ProgressLines.Add( p ) );
+
+                _viewModel.CanCancel = true;
             } );
 
             try
@@ -90,6 +92,7 @@ namespace RockSweeper.Dialogs
 
             Dispatcher.Invoke( () =>
             {
+                _viewModel.CanCancel = false;
                 MessageBox.Show( this, "Finished processing database.", "Completed" );
             } );
         }
@@ -114,8 +117,15 @@ namespace RockSweeper.Dialogs
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
-                progressLine.Progress = e.Progress * 100;
                 progressLine.Message = e.Message;
+
+                if ( e.Progress.HasValue )
+                {
+                    progressLine.Progress = e.Progress.Value * 100;
+
+                    var index = _viewModel.ProgressLines.IndexOf( progressLine );
+                    _viewModel.Progress = ( index + e.Progress.Value ) / _viewModel.ProgressLines.Count;
+                }
             } );
         }
 
@@ -130,8 +140,7 @@ namespace RockSweeper.Dialogs
 
                 var index = _viewModel.ProgressLines.IndexOf( progressLine );
 
-                _viewModel.Progress = ( index / ( double ) _viewModel.ProgressLines.Count );
-                _viewModel.CanCancel = false;
+                _viewModel.Progress = ( index + 1 ) / ( double ) _viewModel.ProgressLines.Count;
             } );
         }
 
