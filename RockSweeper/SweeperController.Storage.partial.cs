@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper
 {
@@ -62,7 +63,85 @@ namespace RockSweeper
         [ConflictsWithAction( nameof( MoveBinaryFilesIntoDatabase ) )]
         public void ConvertBinaryFilesToDatabasePlaceholders()
         {
+            var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
 
+            var files = SqlQuery( "SELECT [Id],[Guid],[FileName],[MimeType],[FileSize],[Width],[Height] FROM [BinaryFile]" )
+                .ToObjects<BinaryFile>();
+            double fileCount = files.Count;
+            var fileNumber = 0;
+
+            var groupedFiles = files
+                .GroupBy( f => new
+                {
+                    f.Width,
+                    f.Height
+                } );
+
+            foreach ( var fileGroup in groupedFiles )
+            {
+                Stream imageStream = null;
+
+                foreach ( var file in fileGroup )
+                {
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                    Progress( fileNumber / fileCount );
+
+                    Stream contentStream;
+
+                    if ( file.IsImage() )
+                    {
+                        if ( imageStream == null )
+                        {
+                            // Force to PNG format.
+                            imageStream = new MemoryStream( CreatePlaceholderImage( "test.png", file.Width ?? 256, file.Height ?? 256 ) );
+                        }
+
+                        contentStream = imageStream;
+                    }
+                    else
+                    {
+                        contentStream = new MemoryStream( new byte[0] );
+                    }
+
+                    // Update the existing record with the size and size if we already had those.
+                    var parameters = new Dictionary<string, object>();
+                    var sets = new List<string>();
+                    var path = file.IsImage() ? $"~/GetImage.ashx?Guid={file.Guid}" : $"~/GetFile.ashx?Guid={file.Guid}";
+
+                    if ( file.FileSize.HasValue )
+                    {
+                        sets.Add( "[FileSize] = @Size" );
+                        parameters.Add( "Size", contentStream.Length );
+                    }
+
+                    sets.Add( "[StorageEntityTypeId] = @EntityTypeId" );
+                    parameters.Add( "EntityTypeId", databaseEntityTypeId );
+
+                    sets.Add( "[StorageEntitySettings] = NULL" );
+
+                    sets.Add( "[Path] = @Path" );
+                    parameters.Add( "Path", path );
+
+                    if ( file.IsImage() )
+                    {
+                        sets.Add( "[MimeType] = 'image/png'" );
+                    }
+
+                    SqlCommand( $"UPDATE [BinaryFile] SET {string.Join( ", ", sets )} WHERE [Id] = {file.Id}", parameters );
+
+                    // Update the image content.
+                    SqlCommand( $"DELETE FROM [BinaryFileData] WHERE [Id] = {file.Id}" );
+                    SqlCommand( $"INSERT INTO [BinaryFileData] ([Id], [Content], [Guid]) VALUES ({file.Id}, @Content, NEWID())", new Dictionary<string, object>
+                    {
+                        { "Content", contentStream }
+                    } );
+
+                    fileNumber++;
+                }
+
+                imageStream?.Dispose();
+            }
         }
 
         /// <summary>
@@ -128,52 +207,9 @@ namespace RockSweeper
                     }
                 }
 
-                using ( var imageStream = new MemoryStream() )
+                using ( var imageStream = new MemoryStream( CreatePlaceholderImage( filename, width, height ) ) )
                 {
-                    //
-                    // Generate the new image.
-                    //
-                    try
-                    {
-                        var image = new Bitmap( width, height );
-                        var g = Graphics.FromImage( image );
-                        var font = new Font( "Tahoma", height / 10 );
-                        var sizeText = $"{ width }x{ height }";
-
-                        g.FillRectangle( Brushes.White, new Rectangle( 0, 0, width, height ) );
-                        var size = g.MeasureString( sizeText, font );
-                        g.DrawString( sizeText, font, Brushes.Black, new PointF( ( width - size.Width ) / 2, ( height - size.Height ) / 2 ) );
-                        g.Flush();
-
-                        image.SetResolution( 72, 72 );
-
-                        if ( filename.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase ) )
-                        {
-                            image.Save( imageStream, System.Drawing.Imaging.ImageFormat.Png );
-                        }
-                        else
-                        {
-                            var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
-                                .Where( c => c.MimeType == "image/jpeg" )
-                                .First();
-
-                            var encoderParameters = new System.Drawing.Imaging.EncoderParameters( 1 );
-                            encoderParameters.Param[0] = new System.Drawing.Imaging.EncoderParameter( System.Drawing.Imaging.Encoder.Quality, 50L );
-
-                            image.Save( imageStream, encoder, encoderParameters );
-                        }
-
-                        imageStream.Position = 0;
-                    }
-                    catch
-                    {
-                        imageStream.Position = 0;
-                        imageStream.SetLength( 0 );
-                    }
-
-                    //
                     // Update the existing record with the size and size if we already had those.
-                    //
                     var parameters = new Dictionary<string, object>();
                     var sets = new List<string>();
 
@@ -200,9 +236,7 @@ namespace RockSweeper
                         SqlCommand( $"UPDATE [BinaryFile] SET { string.Join( ", ", sets ) } WHERE [Id] = { fileId }", parameters );
                     }
 
-                    //
                     // Update the image content.
-                    //
                     SqlCommand( $"UPDATE [BinaryFileData] SET [Content] = @Content WHERE [Id] = { fileId }", new Dictionary<string, object>
                     {
                         { "Content", imageStream }
@@ -253,41 +287,8 @@ namespace RockSweeper
                 int width = 1;
                 int height = 1;
 
-                using ( var imageStream = new MemoryStream() )
+                using ( var imageStream = new MemoryStream( CreatePlaceholderImage( filename, width, height ) ) )
                 {
-                    //
-                    // Generate the new image.
-                    //
-                    try
-                    {
-                        var image = new Bitmap( width, height );
-
-                        image.SetResolution( 72, 72 );
-
-                        if ( filename.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase ) )
-                        {
-                            image.Save( imageStream, System.Drawing.Imaging.ImageFormat.Png );
-                        }
-                        else
-                        {
-                            var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
-                                .Where( c => c.MimeType == "image/jpeg" )
-                                .First();
-
-                            var encoderParameters = new System.Drawing.Imaging.EncoderParameters( 1 );
-                            encoderParameters.Param[0] = new System.Drawing.Imaging.EncoderParameter( System.Drawing.Imaging.Encoder.Quality, 50L );
-
-                            image.Save( imageStream, encoder, encoderParameters );
-                        }
-
-                        imageStream.Position = 0;
-                    }
-                    catch
-                    {
-                        imageStream.Position = 0;
-                        imageStream.SetLength( 0 );
-                    }
-
                     //
                     // Update the existing record with the size and size if we already had those.
                     //
@@ -513,5 +514,68 @@ namespace RockSweeper
                 }
             }
         }
+
+        #region Private Methods
+
+        /// <summary>
+        /// Creates a new placeholder image of the given dimensions.
+        /// </summary>
+        /// <param name="originalFilename">The original filename, used to determine the output format.</param>
+        /// <param name="width">The width of the image.</param>
+        /// <param name="height">The height of the image.</param>
+        /// <returns>A byte array that represents the encoded format.</returns>
+        private byte[] CreatePlaceholderImage( string originalFilename, int width, int height )
+        {
+            using ( var imageStream = new MemoryStream() )
+            {
+                // Generate the new image.
+                try
+                {
+                    var image = new Bitmap( width, height );
+                    var g = Graphics.FromImage( image );
+
+                    g.FillRectangle( Brushes.White, new Rectangle( 0, 0, width, height ) );
+
+                    if ( width > 128 && height > 64 )
+                    {
+                        var font = new Font( "Tahoma", height / 10 );
+                        var sizeText = $"{width}x{height}";
+                        var size = g.MeasureString( sizeText, font );
+                        g.DrawString( sizeText, font, Brushes.Black, new PointF( ( width - size.Width ) / 2, ( height - size.Height ) / 2 ) );
+                    }
+
+                    g.Flush();
+
+                    image.SetResolution( 72, 72 );
+
+                    if ( originalFilename.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase ) )
+                    {
+                        image.Save( imageStream, System.Drawing.Imaging.ImageFormat.Png );
+                    }
+                    else
+                    {
+                        var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                            .Where( c => c.MimeType == "image/jpeg" )
+                            .First();
+
+                        var encoderParameters = new System.Drawing.Imaging.EncoderParameters( 1 );
+                        encoderParameters.Param[0] = new System.Drawing.Imaging.EncoderParameter( System.Drawing.Imaging.Encoder.Quality, 50L );
+
+                        image.Save( imageStream, encoder, encoderParameters );
+                    }
+
+                    imageStream.Position = 0;
+                }
+                catch
+                {
+                    imageStream.Position = 0;
+                    imageStream.SetLength( 0 );
+                }
+
+                return imageStream.ToArray();
+            }
+        }
+
+        #endregion
     }
 }

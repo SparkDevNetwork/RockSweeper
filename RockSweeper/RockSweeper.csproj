@@ -136,6 +136,7 @@
     </Compile>
     <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
+    <Compile Include="Utility\BinaryFile.cs" />
     <Compile Include="Utility\BoolToValueConverterT.cs" />
     <Compile Include="Utility\Coordinates.cs" />
     <Compile Include="Dialogs\PreferencesDialog.xaml.cs">

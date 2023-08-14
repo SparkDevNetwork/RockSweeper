@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper
 {
@@ -108,6 +109,46 @@ namespace RockSweeper
             }
 
             return new string( chars );
+        }
+
+        /// <summary>
+        /// Convert a set of dictionaries into typed objects.
+        /// </summary>
+        /// <typeparam name="T">The type of object to be created.</typeparam>
+        /// <param name="items">The items to be converted.</param>
+        /// <returns>A list of typed objects.</returns>
+        public static List<T> ToObjects<T>( this IEnumerable<Dictionary<string, object>> items )
+            where T : class, new()
+        {
+            return items
+                .Select( item =>
+                {
+                    var typedItem = new T();
+                    var itemType = typeof( T );
+
+                    foreach ( var kvp in item )
+                    {
+                        var property = itemType.GetProperty( kvp.Key );
+
+                        property.SetValue( typedItem, kvp.Value );
+                    }
+
+                    return typedItem;
+                } )
+                .ToList();
+        }
+
+        /// <summary>
+        /// Determines if the file is likely an image.
+        /// </summary>
+        /// <param name="file">The file to be checked.</param>
+        /// <returns><c>true</c> if the file is most likely an image; otherwise <c>false</c>.</returns>
+        public static bool IsImage( this BinaryFile file )
+        {
+            return file.FileName.EndsWith( ".jpg", StringComparison.CurrentCultureIgnoreCase )
+                || file.FileName.EndsWith( ".jpeg", StringComparison.CurrentCultureIgnoreCase )
+                || file.FileName.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase )
+                || file.MimeType.StartsWith( "image/", StringComparison.CurrentCultureIgnoreCase );
         }
     }
 }

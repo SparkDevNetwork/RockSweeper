@@ -149,7 +149,7 @@ namespace RockSweeper.Utility
         /// Gets or sets the progress.
         /// </summary>
         /// <value>
-        /// The progress.
+        /// The progress value between 0 and 100.
         /// </value>
         public double? Progress
         {

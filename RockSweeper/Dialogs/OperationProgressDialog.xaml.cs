@@ -101,7 +101,7 @@ namespace RockSweeper.Dialogs
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
                 progressLine.State = ProgressLineState.Processing;
-                progressLine.Progress = e.Progress;
+                progressLine.Progress = e.Progress * 100;
                 progressLine.Message = e.Message;
 
                 dgProgress.ScrollIntoView( progressLine );
@@ -114,7 +114,7 @@ namespace RockSweeper.Dialogs
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
-                progressLine.Progress = e.Progress;
+                progressLine.Progress = e.Progress * 100;
                 progressLine.Message = e.Message;
             } );
         }

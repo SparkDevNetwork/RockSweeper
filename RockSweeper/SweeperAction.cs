@@ -110,6 +110,7 @@ namespace RockSweeper
         /// <param name="method">The method that performs this action.</param>
         public SweeperAction( MethodInfo method )
         {
+            Method = method;
             Id = method.GetCustomAttribute<ActionIdAttribute>().Id;
             Title = method.GetCustomAttribute<TitleAttribute>().Title;
             Description = method.GetCustomAttribute<DescriptionAttribute>().Description;
