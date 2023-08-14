@@ -71,6 +71,10 @@ namespace RockSweeper
         [Description( "Converts binary files stored in the database to placeholder data and then converts any non-database storage files to be placeholders stored in the database." )]
         [Category( "Storage" )]
         [ConflictsWithAction( nameof( MoveBinaryFilesIntoDatabase ) )]
+        [ConflictsWithAction( nameof( ReplaceDatabaseImagesWithSizedPlaceholders ) )]
+        [ConflictsWithAction( nameof( ReplaceDatabaseImagesWithEmptyPlaceholders ) )]
+        [ConflictsWithAction( nameof( ReplaceDatabaseDocumentsWithSizedPlaceholders ) )]
+        [ConflictsWithAction( nameof( ReplaceDatabaseDocumentsWithEmptyPlaceholders ) )]
         public void ConvertBinaryFilesToDatabasePlaceholders()
         {
             var databaseEntityTypeId = GetEntityTypeId( "Rock.Storage.Provider.Database" );
