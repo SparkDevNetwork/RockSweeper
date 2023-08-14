@@ -211,6 +211,11 @@
     </None>
     <EmbeddedResource Include="Resources\en_rock.locale.json" />
     <EmbeddedResource Include="Resources\city_postal.csv" />
+    <EmbeddedResource Include="Resources\placeholder.doc" />
+    <EmbeddedResource Include="Resources\placeholder.docx" />
+    <EmbeddedResource Include="Resources\placeholder.pdf" />
+    <EmbeddedResource Include="Resources\placeholder.xls" />
+    <EmbeddedResource Include="Resources\placeholder.xlsx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

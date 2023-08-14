@@ -12,6 +12,16 @@ namespace RockSweeper
 {
     public partial class SweeperController
     {
+        private static readonly Lazy<byte[]> _placeholderDoc = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.doc" ) );
+
+        private static readonly Lazy<byte[]> _placeholderDocx = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.docx" ) );
+
+        private static readonly Lazy<byte[]> _placeholderXls = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.xls" ) );
+
+        private static readonly Lazy<byte[]> _placeholderXlsx = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.xlsx" ) );
+
+        private static readonly Lazy<byte[]> _placeholderPdf = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.pdf" ) );
+
         /// <summary>
         /// Moves all the binary files into database.
         /// </summary>
@@ -101,7 +111,30 @@ namespace RockSweeper
                     }
                     else
                     {
-                        contentStream = new MemoryStream( new byte[0] );
+                        if ( file.FileName.EndsWith( ".docx", StringComparison.OrdinalIgnoreCase ) || file.MimeType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" )
+                        {
+                            contentStream = new MemoryStream( _placeholderDocx.Value );
+                        }
+                        else if ( file.FileName.EndsWith( ".doc", StringComparison.OrdinalIgnoreCase ) || file.MimeType == "application/msword" )
+                        {
+                            contentStream = new MemoryStream( _placeholderDoc.Value );
+                        }
+                        else if ( file.FileName.EndsWith( ".xlsx", StringComparison.OrdinalIgnoreCase ) || file.MimeType == "" )
+                        {
+                            contentStream = new MemoryStream( _placeholderXlsx.Value );
+                        }
+                        else if ( file.FileName.EndsWith( ".xls", StringComparison.OrdinalIgnoreCase ) || file.MimeType == "application/vnd.ms-excel" )
+                        {
+                            contentStream = new MemoryStream( _placeholderXls.Value );
+                        }
+                        else if ( file.FileName.EndsWith( ".pdf", StringComparison.OrdinalIgnoreCase ) || file.MimeType == "application/pdf" )
+                        {
+                            contentStream = new MemoryStream( _placeholderPdf.Value );
+                        }
+                        else
+                        {
+                            contentStream = new MemoryStream( new byte[0] );
+                        }
                     }
 
                     // Update the existing record with the size and size if we already had those.

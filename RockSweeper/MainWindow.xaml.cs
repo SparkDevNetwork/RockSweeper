@@ -285,8 +285,6 @@ namespace RockSweeper
         {
             foreach ( var option in ConfigOptions )
             {
-                //var hasConflict = ConfigOptions.Any( o => option.ConflictingActions.Contains( o.Id ) );
-
                 if ( option.Enabled && !option.Conflicted )
                 {
                     option.Selected = true;

@@ -1261,18 +1261,20 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         [Category( "Data Scrubbing" )]
         public void GenerateOrganizationAndCampuses()
         {
-            string organizationCity = DataFaker.Address.City();
+            string organizationCity = DataFaker.PickRandom( LocationCityPostalCodes.Keys.ToList() );
 
             SetGlobalAttributeValue( "OrganizationName", $"{ organizationCity } Community Church" );
             SetGlobalAttributeValue( "OrganizationAbbreviation", $"{ organizationCity } Community Church" );
             SetGlobalAttributeValue( "OrganizationWebsite", $"http://www.{ organizationCity.Replace( " ", "" ).ToLower() }communitychurch.org/" );
 
-            var campuses = SqlQuery<int, string, string>( "SELECT [Id], [Url], [Description] FROM [Campus]" );
+            var campuses = SqlQuery<int, string, string, string>( "SELECT [Id], [Url], [Description], [ShortCode] FROM [Campus]" );
             foreach ( var campus in campuses )
             {
+                var campusCityName = DataFaker.PickRandom( LocationCityPostalCodes.Keys.ToList() );
+
                 var changes = new Dictionary<string, object>
                 {
-                    { "Name", DataFaker.Address.City() }
+                    { "Name", campusCityName }
                 };
 
                 if ( !string.IsNullOrWhiteSpace( campus.Item2 ) )
@@ -1283,6 +1285,11 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 if ( !string.IsNullOrWhiteSpace( campus.Item3 ) )
                 {
                     changes.Add( "Description", DataFaker.Lorem.Sentence() );
+                }
+
+                if ( !string.IsNullOrWhiteSpace( campus.Item4 ) )
+                {
+                    changes.Add( "ShortCode", campusCityName.Substring( 0, 3 ).ToUpper() );
                 }
 
                 UpdateDatabaseRecord( "Campus", campus.Item1, changes );
