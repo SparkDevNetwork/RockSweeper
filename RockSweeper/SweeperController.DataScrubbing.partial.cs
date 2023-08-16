@@ -1573,13 +1573,56 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
         /// Empties the saved account data.
         /// </summary>
         [ActionId( "702834d4-ca31-4ddb-bbac-ce629edbb82d" )]
-        [Title( "Empty Saved Account Tables" )]
-        [Description( "Clears the saved bank account and saved CC account tables." )]
+        [Title( "Scrub Saved Account Tables" )]
+        [Description( "Removes sensitive information the saved bank account and saved CC account tables." )]
         [Category( "Data Scrubbing" )]
-        public void EmptySavedAccountTables()
+        public void ScrubSavedAccountTables()
         {
-            SqlCommand( "TRUNCATE TABLE [FinancialPersonBankAccount]" );
-            SqlCommand( "TRUNCATE TABLE [FinancialPersonSavedAccount]" );
+            // Process all the saved account records.
+            var accounts = SqlQuery<int, string, string, string, string>( "SELECT [Id], [ReferenceNumber], [Name], [TransactionCode], [GatewayPersonIdentifier] FROM [FinancialPersonSavedAccount]" );
+            var gatewayPersonIdentifierLookup = accounts
+                .Select( a => a.Item5 )
+                .Distinct()
+                .ToDictionary( id => id, id => id.RandomizeLettersAndNumbers() );
+            var updates = new List<Tuple<int, Dictionary<string, object>>>();
+
+            foreach ( var account in accounts )
+            {
+                var newData = new Dictionary<string, object>
+                {
+                    { "ReferenceNumber", account.Item2.RandomizeLettersAndNumbers() },
+                    { "Name", DataFaker.Lorem.Words( account.Item3.Split( ' ' ).Length ) },
+                    { "TransactionCode", account.Item4.RandomizeLettersAndNumbers() },
+                    { "GatewayPersonIdentifier", gatewayPersonIdentifierLookup[account.Item5] }
+                };
+
+                updates.Add( new Tuple<int, Dictionary<string, object>>( account.Item1, newData ) );
+            }
+
+            UpdateDatabaseRecords( "FinancialPersonSavedAccount", updates );
+
+            Progress( 0.5 );
+
+            // Process all the bank account records.
+            var bankAccounts = SqlQuery<int, string, string>( "SELECT [Id], [AccountNumberSecured], [AccountNumberMasked] FROM [FinancialPersonBankAccount]" );
+            gatewayPersonIdentifierLookup = accounts
+                .Select( a => a.Item5 )
+                .Distinct()
+                .ToDictionary( id => id, id => id.RandomizeLettersAndNumbers() );
+            updates = new List<Tuple<int, Dictionary<string, object>>>();
+
+            foreach ( var account in bankAccounts )
+            {
+                var newData = new Dictionary<string, object>
+                {
+                    { "AccountNumberSecured", string.Empty },
+                    { "AccountNumberMasked", account.Item3.RandomizeLettersAndNumbers( '*' ) }
+                };
+
+                updates.Add( new Tuple<int, Dictionary<string, object>>( account.Item1, newData ) );
+            }
+
+            UpdateDatabaseRecords( "FinancialPersonBankAccount", updates );
         }
     }
 }

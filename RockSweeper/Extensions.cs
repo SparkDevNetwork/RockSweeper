@@ -84,8 +84,9 @@ namespace RockSweeper
         /// Randomizes the letters and numbers in a string.
         /// </summary>
         /// <param name="s">The s.</param>
+        /// <param name="allowedCharacters">A set of characters to be allowed.</param>
         /// <returns></returns>
-        public static string RandomizeLettersAndNumbers( this string s )
+        public static string RandomizeLettersAndNumbers( this string s, params char[] allowedCharacters )
         {
             var randomizer = new Bogus.Randomizer();
             var chars = s.ToArray();
@@ -93,6 +94,11 @@ namespace RockSweeper
             for ( int i = 0; i < chars.Length; i++ )
             {
                 char c = chars[i];
+
+                if ( allowedCharacters.Contains( c ) )
+                {
+                    continue;
+                }
 
                 if ( char.IsLower( c ) )
                 {
