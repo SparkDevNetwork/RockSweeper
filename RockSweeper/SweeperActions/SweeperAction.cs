@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -17,6 +18,11 @@ namespace RockSweeper.SweeperActions
         private bool _disposedValue;
 
         /// <summary>
+        /// The stopwatch that is used to calculate timing for progress updates.
+        /// </summary>
+        private Stopwatch _stopwatch;
+
+        /// <summary>
         /// The sweeper that handles all the low level logic.
         /// </summary>
         public SweeperController Sweeper { get; set; }
@@ -30,7 +36,18 @@ namespace RockSweeper.SweeperActions
         /// <param name="stepCount">The step count.</param>
         protected void Progress( double percentage, int? step = null, int? stepCount = null )
         {
+            if ( _stopwatch == null )
+            {
+                _stopwatch = Stopwatch.StartNew();
+            }
+            else if ( _stopwatch.Elapsed.TotalMilliseconds < 1000 / 60.0 )
+            {
+                // Only update progress at roughly 60fps.
+                return;
+            }
+
             Sweeper.Progress( GetActionId(), percentage, step, stepCount );
+            _stopwatch.Restart();
         }
 
         /// <summary>

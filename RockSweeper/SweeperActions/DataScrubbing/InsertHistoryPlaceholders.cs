@@ -52,28 +52,6 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     }
 
                     //
-                    // Scrub the Summary.
-                    //
-                    var summary = ( string ) history["Summary"];
-                    if ( !string.IsNullOrWhiteSpace( summary ) )
-                    {
-                        var newValue = fieldValueRegex.Replace( summary, ( m ) =>
-                        {
-                            return $"{m.Groups[1].Value}HIDDEN{m.Groups[3].Value}";
-                        } );
-
-                        newValue = loginFieldValueRegex.Replace( newValue, ( m ) =>
-                        {
-                            return $"{m.Groups[1].Value}HIDDEN{m.Groups[3].Value}";
-                        } );
-
-                        if ( newValue != summary )
-                        {
-                            changes.Add( "Summary", newValue );
-                        }
-                    }
-
-                    //
                     // Scrub the RelatedData to remove any mentions of the original values.
                     //
                     var relatedData = ( string ) history["RelatedData"];
