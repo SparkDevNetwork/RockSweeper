@@ -19,16 +19,16 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [AfterAction( typeof( GenerateRandomLogins ) )]
     public class InsertHistoryPlaceholders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
             var loginFieldValueRegex = new Regex( "(.*logged in.*<span class=['\"]field-name['\"]>)([^<]*)(<\\/span>)" );
 
-            var historyIds = Sweeper.SqlQuery<int>( $"SELECT [Id] FROM [History]" );
+            var historyIds = await Sweeper.SqlQueryAsync<int>( $"SELECT [Id] FROM [History]" );
 
-            void ProcessChunk( List<int> items )
+            async Task ProcessChunk( List<int> items )
             {
-                var historyItems = Sweeper.SqlQuery( $"SELECT * FROM [History] WHERE [Id] IN ({string.Join( ",", items )})" );
+                var historyItems = await Sweeper.SqlQueryAsync( $"SELECT * FROM [History] WHERE [Id] IN ({string.Join( ",", items )})" );
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
                 foreach ( var history in historyItems )
@@ -143,16 +143,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( bulkChanges.Any() )
                 {
-                    Sweeper.UpdateDatabaseRecords( "History", bulkChanges );
+                    await Sweeper.UpdateDatabaseRecordsAsync( "History", bulkChanges );
                 }
             }
 
-            Sweeper.ProcessItemsInParallel( historyIds, 1000, ProcessChunk, ( p ) =>
+            await Sweeper.ProcessItemsInParallelAsync( historyIds, 1000, ProcessChunk, ( p ) =>
             {
                 Progress( p );
             } );
-
-            return Task.CompletedTask;
         }
     }
 }

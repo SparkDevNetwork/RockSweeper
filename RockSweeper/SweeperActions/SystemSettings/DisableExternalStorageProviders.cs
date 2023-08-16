@@ -17,15 +17,13 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class DisableExternalStorageProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DisableComponentsOfType( "Rock.Storage.ProviderComponent", new[]
+            await Sweeper.DisableComponentsOfTypeAsync( "Rock.Storage.ProviderComponent", new[]
             {
                 "Rock.Storage.Provider.Database",
                 "Rock.Storage.Provider.FileSystem"
             } );
-
-            return Task.CompletedTask;
         }
     }
 }

@@ -15,29 +15,29 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [AfterAction( typeof( GenerateRandomNames ) )]
     public class SanitizeBackgroundCheckData : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             int stepCount = 5;
 
             //
             // Step 1: Clear background check response data, which can contain sensitive information.
             //
-            Sweeper.SqlCommand( "UPDATE [BackgroundCheck] SET [ResponseData] = ''" );
+            await Sweeper.SqlCommandAsync( "UPDATE [BackgroundCheck] SET [ResponseData] = ''" );
             Progress( 1, 1, stepCount );
 
             //
             // Step 2: Clear any links to PDFs from Protect My Ministry
             //
-            Sweeper.SqlCommand( "UPDATE [AttributeValue] SET [Value] = 'HIDDEN' WHERE [Value] LIKE '%://services.priorityresearch.com%'" );
+            await Sweeper.SqlCommandAsync( "UPDATE [AttributeValue] SET [Value] = 'HIDDEN' WHERE [Value] LIKE '%://services.priorityresearch.com%'" );
             Progress( 1, 2, stepCount );
 
             //
             // Step 3: Clear any background check field types.
             //
-            int? backgroundCheckFieldTypeId = Sweeper.GetFieldTypeId( "Rock.Field.Types.BackgroundCheckFieldType" );
+            int? backgroundCheckFieldTypeId = await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.BackgroundCheckFieldType" );
             if ( backgroundCheckFieldTypeId.HasValue )
             {
-                Sweeper.SqlCommand( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
+                await Sweeper.SqlCommandAsync( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
                 Progress( 1, 3, stepCount );
             }
 
@@ -46,7 +46,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             // This action is run after the action to randomize person names runs, so just update
             // the names to the new person name.
             //
-            var backgroundCheckWorkflowTypeIds = Sweeper.SqlQuery<int>( @"
+            var backgroundCheckWorkflowTypeIds = await Sweeper.SqlQueryAsync<int>( @"
 SELECT
 	WT.[Id]
 FROM [WorkflowType] AS WT
@@ -57,7 +57,7 @@ LEFT JOIN [Attribute] AS ASSN ON ASSN.[EntityTypeQualifierColumn] = 'WorkflowTyp
 WHERE AReportRecommendation.[Id] IS NOT NULL OR [ASSN].[Id] IS NOT NULL" );
             foreach ( var workflowTypeId in backgroundCheckWorkflowTypeIds )
             {
-                Sweeper.SqlCommand( $@"
+                await Sweeper.SqlCommandAsync( $@"
 UPDATE W
 	SET W.[Name] = P.[NickName] + ' ' + P.[LastName]
 FROM [Workflow] AS W
@@ -69,9 +69,8 @@ WHERE W.[WorkflowTypeId] = {workflowTypeId}
   AND APerson.[EntityTypeQualifierColumn] = 'WorkflowTypeId'
   AND APerson.[EntityTypeQualifierValue] = W.[WorkflowTypeId]" );
             }
-            Progress( 1, 4, stepCount );
 
-            return Task.CompletedTask;
+            Progress( 1, 4, stepCount );
         }
     }
 }

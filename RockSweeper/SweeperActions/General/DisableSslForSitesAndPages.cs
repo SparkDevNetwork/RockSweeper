@@ -15,12 +15,10 @@ namespace RockSweeper.SweeperActions.General
     [DefaultValue( true )]
     public class DisableSslForSitesAndPages : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SqlCommand( "UPDATE [Site] SET [RequiresEncryption] = 0" );
-            Sweeper.SqlCommand( "UPDATE [Page] SET [RequiresEncryption] = 0" );
-
-            return Task.CompletedTask;
+            await Sweeper.SqlCommandAsync( "UPDATE [Site] SET [RequiresEncryption] = 0" );
+            await Sweeper.SqlCommandAsync( "UPDATE [Page] SET [RequiresEncryption] = 0" );
         }
     }
 }

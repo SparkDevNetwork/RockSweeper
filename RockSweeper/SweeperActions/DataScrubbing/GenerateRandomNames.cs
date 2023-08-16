@@ -17,7 +17,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class GenerateRandomNames : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             var processedPersonIds = new List<int>();
             var processedFamilyIds = new List<int>();
@@ -34,7 +34,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Stage 1: Update Person table
             //
-            var familyData = Sweeper.SqlQuery( @"SELECT
+            var familyData = ( await Sweeper.SqlQueryAsync( @"SELECT
 G.[Id] AS [FamilyId], P.[Id], P.[FirstName], P.[NickName], P.[MiddleName], P.[LastName], RT.[Guid] AS [RecordType], P.[Gender], G.[Name] AS [FamilyName]
 FROM [Person] AS P
 INNER JOIN [GroupMember] AS GM ON GM.[PersonId] = P.[Id]
@@ -42,7 +42,7 @@ INNER JOIN [Group] AS G ON G.[Id] = GM.[GroupId]
 INNER JOIN [GroupType] AS GT ON GT.[Id] = G.[GroupTypeId]
 INNER JOIN [DefinedValue] AS RT ON RT.[Id] = P.[RecordTypeValueId]
 WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
-" ).GroupBy( p => ( int ) p["FamilyId"] ).ToList();
+" ) ).GroupBy( p => ( int ) p["FamilyId"] ).ToList();
 
             for ( int i = 0; i < familyData.Count; i++ )
             {
@@ -136,7 +136,7 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
                         //
                     }
 
-                    Sweeper.UpdateDatabaseRecord( "Person", ( int ) person["Id"], changes );
+                    await Sweeper.UpdateDatabaseRecordAsync( "Person", ( int ) person["Id"], changes );
 
                     //
                     // Update family name.
@@ -156,7 +156,7 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
                             familyChanges.Add( "Name", changes["LastName"] );
                         }
 
-                        Sweeper.UpdateDatabaseRecord( "Group", familyId, familyChanges );
+                        await Sweeper.UpdateDatabaseRecordAsync( "Group", familyId, familyChanges );
                     }
                 }
 
@@ -166,7 +166,7 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
             //
             // Stage 2: Update BenevolenceRequest
             //
-            var queryData = Sweeper.SqlQuery( @"SELECT
+            var queryData = await Sweeper.SqlQueryAsync( @"SELECT
 BR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [BenevolenceRequest] AS BR
 LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = BR.[RequestedByPersonAliasId]
@@ -194,7 +194,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
                     changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "BenevolenceRequest", ( int ) queryData[i]["Id"], changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "BenevolenceRequest", ( int ) queryData[i]["Id"], changes );
 
                 Progress( i / ( double ) queryData.Count, 2, stepCount );
             }
@@ -202,7 +202,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
             //
             // Stage 3: Update PrayerRequest
             //
-            queryData = Sweeper.SqlQuery( @"SELECT
+            queryData = await Sweeper.SqlQueryAsync( @"SELECT
 PR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [PrayerRequest] AS PR
 LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = PR.[RequestedByPersonAliasId]
@@ -230,7 +230,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
                     changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
 
                 Progress( i / ( double ) queryData.Count, 3, stepCount );
             }
@@ -238,7 +238,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
             //
             // Stage 4: Update Registration
             //
-            queryData = Sweeper.SqlQuery( @"SELECT
+            queryData = await Sweeper.SqlQueryAsync( @"SELECT
 R.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [Registration] AS R
 LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = R.[PersonAliasId]
@@ -266,7 +266,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
                     changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
 
                 Progress( i / ( double ) queryData.Count, 4, stepCount );
             }
@@ -274,11 +274,11 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
             //
             // Stage 5: Update PersonPreviousName
             //
-            var previousNames = Sweeper.SqlQuery<int, int, string>( @"SELECT
+            var previousNames = ( await Sweeper.SqlQueryAsync<int, int, string>( @"SELECT
 PPN.[Id], PA.[PersonId], PPN.[LastName]
 FROM PersonPreviousName AS PPN
 INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
-" ).GroupBy( p => p.Item2 ).ToList();
+" ) ).GroupBy( p => p.Item2 ).ToList();
 
             for ( int i = 0; i < previousNames.Count; i++ )
             {
@@ -296,7 +296,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
 
                     changes.Add( "LastName", previousNameLookup[previousName.Item3] );
 
-                    Sweeper.UpdateDatabaseRecord( "PersonPreviousName", previousName.Item1, changes );
+                    await Sweeper.UpdateDatabaseRecordAsync( "PersonPreviousName", previousName.Item1, changes );
                 }
 
                 Progress( i / ( double ) previousNames.Count, 5, stepCount );
@@ -323,15 +323,13 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             int tableStep = 0;
             foreach ( var tc in scrubTables )
             {
-                Sweeper.ScrubTableTextColumns( tc.Key, tc.Value, scrubFromName, p =>
+                await Sweeper.ScrubTableTextColumnsAsync( tc.Key, tc.Value, scrubFromName, p =>
                 {
                     Progress( p, 6 + tableStep, stepCount );
                 } );
 
                 tableStep++;
             }
-
-            return Task.CompletedTask;
         }
     }
 }

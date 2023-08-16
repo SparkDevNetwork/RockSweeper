@@ -14,16 +14,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class EmptyAnalyticsSourceTables : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var tables = Sweeper.SqlQuery<string>( "SELECT [name] FROM sys.all_objects WHERE [type_desc] = 'USER_TABLE' AND [name] LIKE 'AnalyticsSource%'" );
+            var tables = await Sweeper.SqlQueryAsync<string>( "SELECT [name] FROM sys.all_objects WHERE [type_desc] = 'USER_TABLE' AND [name] LIKE 'AnalyticsSource%'" );
 
             foreach ( var table in tables )
             {
-                Sweeper.SqlCommand( $"TRUNCATE TABLE [{table}]" );
+                await Sweeper.SqlCommandAsync( $"TRUNCATE TABLE [{table}]" );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

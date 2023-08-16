@@ -16,11 +16,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetLocationServices : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Address.VerificationComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Address.VerificationComponent" );
         }
     }
 }

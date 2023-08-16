@@ -19,14 +19,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [RequiresLocationService]
     public class GenerateRandomLocationAddresses : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             int stepCount = 3;
 
             //
             // Step 1: Process all locations that are not geo-coded.
             //
-            var locations = Sweeper.SqlQuery( "SELECT [Id], [Street1], [Street2], [County], [PostalCode], [State], [Country] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
+            var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [County], [PostalCode], [State], [Country] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
             for ( int i = 0; i < locations.Count; i++ )
             {
                 var locationId = ( int ) locations[i]["Id"];
@@ -37,21 +37,21 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 var state = ( string ) locations[i]["State"];
                 var country = ( string ) locations[i]["Country"];
 
-                Sweeper.UpdateLocationWithFakeData( locationId, street1, street2, county, postalCode, state, country );
+                await Sweeper.UpdateLocationWithFakeDataAsync( locationId, street1, street2, county, postalCode, state, country );
 
                 Progress( i / ( double ) locations.Count, 1, stepCount );
             }
 
             double radiusDistance = 35 * 1609.344;
-            var centerLocationGuid = Sweeper.GetGlobalAttributeValue( "OrganizationAddress" );
-            var centerLocation = new Coordinates( Sweeper.SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ).First() );
+            var centerLocationGuid = Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
+            var centerLocation = new Coordinates( ( await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ) ).First() );
             var targetCenterLocation = new Coordinates( Properties.Settings.Default.TargetGeoCenter );
             var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Latitude, targetCenterLocation.Longitude - centerLocation.Longitude );
 
             //
             // Step 2: Move all locations with a valid GeoPoint inside our radius.
             //
-            var geoLocations = Sweeper.SqlQuery( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" );
+            var geoLocations = await Sweeper.SqlQueryAsync( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" );
             var step2Changes = new Dictionary<string, object>();
             for ( int i = 0; i < geoLocations.Count; i++ )
             {
@@ -79,7 +79,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     coordinates = coordinates.CoordinatesByAdjusting( Sweeper.DataFaker.Random.Double( -0.0144927, 0.0144927 ), Sweeper.DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
                 }
 
-                var address = Sweeper.GetBestAddressForCoordinates( coordinates );
+                var address = await Sweeper.GetBestAddressForCoordinatesAsync( coordinates );
 
                 step2Changes.Add( "GeoPoint", coordinates );
 
@@ -113,7 +113,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     step2Changes.Add( "Country", address.Country );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "Location", locationId, step2Changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, step2Changes );
 
                 Progress( i / ( double ) geoLocations.Count, 2, stepCount );
             }
@@ -121,7 +121,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Step 3: Add a 1-mile jitter to any address outside our radius.
             //
-            geoLocations = Sweeper.SqlQuery( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" );
+            geoLocations = await Sweeper.SqlQueryAsync( $"SELECT [Id], [GeoPoint].Lat AS [Latitude], [GeoPoint].Long AS [Longitude], [Street1], [Street2], [City], [County], [PostalCode], [State], [Country] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" );
             for ( int i = 0; i < geoLocations.Count; i++ )
             {
                 var locationId = ( int ) geoLocations[i]["Id"];
@@ -142,7 +142,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     var coordinates = new Coordinates( latitude, longitude );
                     coordinates = coordinates.CoordinatesByAdjusting( Sweeper.DataFaker.Random.Double( -0.0144927, 0.0144927 ), Sweeper.DataFaker.Random.Double( -0.0144927, 0.0144927 ) );
 
-                    var address = Sweeper.GetBestAddressForCoordinates( coordinates );
+                    var address = await Sweeper.GetBestAddressForCoordinatesAsync( coordinates );
 
                     changes.Add( "GeoPoint", coordinates );
 
@@ -176,17 +176,15 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                         changes.Add( "Country", address.Country );
                     }
 
-                    Sweeper.UpdateDatabaseRecord( "Location", locationId, changes );
+                    await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, changes );
                 }
                 else
                 {
-                    Sweeper.UpdateLocationWithFakeData( locationId, street1, street2, county, postalCode, state, country );
+                    await Sweeper.UpdateLocationWithFakeDataAsync( locationId, street1, street2, county, postalCode, state, country );
                 }
 
                 Progress( i / ( double ) geoLocations.Count, 3, stepCount );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

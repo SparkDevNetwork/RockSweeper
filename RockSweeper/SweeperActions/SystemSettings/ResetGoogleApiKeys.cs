@@ -14,12 +14,10 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [Category( "System Settings" )]
     public class ResetGoogleApiKeys : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SetGlobalAttributeValue( "GoogleAPIKey", string.Empty );
-            Sweeper.SetGlobalAttributeValue( "core_GoogleReCaptchaSiteKey", string.Empty );
-
-            return Task.CompletedTask;
+            await Sweeper.SetGlobalAttributeValue( "GoogleAPIKey", string.Empty );
+            await Sweeper.SetGlobalAttributeValue( "core_GoogleReCaptchaSiteKey", string.Empty );
         }
     }
 }

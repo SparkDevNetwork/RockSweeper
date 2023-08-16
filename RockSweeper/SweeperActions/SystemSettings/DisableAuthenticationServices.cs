@@ -17,13 +17,11 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class DisableAuthenticationServices : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DisableComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
+            await Sweeper.DisableComponentsOfTypeAsync( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
                 "Rock.Security.Authentication.PINAuthentication" } );
-
-            return Task.CompletedTask;
         }
     }
 }

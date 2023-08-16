@@ -16,9 +16,9 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class SanitizeContentChannelItems : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var contentChannelItems = Sweeper.SqlQuery<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
+            var contentChannelItems = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
             var regex = new PCRE.PcreRegex( @"(<[^>]*>(*SKIP)(*F)|[^\W]\w+)" );
 
             for ( int i = 0; i < contentChannelItems.Count; i++ )
@@ -40,13 +40,11 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( changes.Any() )
                 {
-                    Sweeper.UpdateDatabaseRecord( "ContentChannelItem", contentChannelItems[i].Item1, changes );
+                    await Sweeper.UpdateDatabaseRecordAsync( "ContentChannelItem", contentChannelItems[i].Item1, changes );
                 }
 
                 Progress( i / ( double ) contentChannelItems.Count );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

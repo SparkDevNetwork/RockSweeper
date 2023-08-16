@@ -17,11 +17,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class DisableBackgroundCheckProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DisableComponentsOfType( "Rock.Security.BackgroundCheckComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DisableComponentsOfTypeAsync( "Rock.Security.BackgroundCheckComponent" );
         }
     }
 }

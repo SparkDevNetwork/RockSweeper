@@ -16,15 +16,13 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetExternalStorageProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Storage.ProviderComponent", new[]
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Storage.ProviderComponent", new[]
             {
                 "Rock.Storage.Provider.Database",
                 "Rock.Storage.Provider.FileSystem"
             } );
-
-            return Task.CompletedTask;
         }
     }
 }

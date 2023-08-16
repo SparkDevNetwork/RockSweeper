@@ -17,11 +17,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class DisableSignatureDocumentProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DisableComponentsOfType( "Rock.Security.DigitalSignatureComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DisableComponentsOfTypeAsync( "Rock.Security.DigitalSignatureComponent" );
         }
     }
 }

@@ -18,25 +18,23 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [AfterAction( typeof( ResetCommunicationTransports ) )]
     public class ConfigureForLocalhostSmtp : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             //
             // Setup the Email medium.
             //
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Medium.Email", "Active", "True" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Medium.Email", "TransportContainer", "1fef44b2-8685-4001-be5b-8a059bc65430" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Medium.Email", "Active", "True" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Medium.Email", "TransportContainer", "1fef44b2-8685-4001-be5b-8a059bc65430" );
 
             //
             // Set SMTP Transport to Active.
             //
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Active", "True" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Server", "localhost" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Port", "25" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "UserName", "" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Password", "" );
-            Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "UseSSL", "False" );
-
-            return Task.CompletedTask;
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Active", "True" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Server", "localhost" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Port", "25" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "UserName", "" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "Password", "" );
+            await Sweeper.SetComponentAttributeValue( "Rock.Communication.Transport.SMTP", "UseSSL", "False" );
         }
     }
 }

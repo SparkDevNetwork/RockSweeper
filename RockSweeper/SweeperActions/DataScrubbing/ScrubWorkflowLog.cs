@@ -14,9 +14,9 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class ScrubWorkflowLog : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.ScrubTableTextColumn( "WorkflowLog", "LogText", ( s ) =>
+            await Sweeper.ScrubTableTextColumnAsync( "WorkflowLog", "LogText", ( s ) =>
             {
                 if ( s.Contains( ">" ) )
                 {
@@ -33,8 +33,6 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 return s;
             }, p => Progress( p ) );
-
-            return Task.CompletedTask;
         }
     }
 }

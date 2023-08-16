@@ -65,12 +65,22 @@ namespace RockSweeper
         /// </summary>
         private static readonly Lazy<byte[]> _placeholderPdf = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.pdf" ) );
 
+        /// <summary>
+        /// The primary state the organization belongs to.
+        /// </summary>
+        private string _primaryState;
+
+        /// <summary>
+        /// The URL to use to get a file from the server.
+        /// </summary>
+        private string _getFileUrl;
+
         #region Events
 
         public event EventHandler<ProgressEventArgs> OperationStarted;
-        
+
         public event EventHandler<ProgressEventArgs> ProgressChanged;
-        
+
         public event EventHandler<ProgressEventArgs> OperationCompleted;
 
         #endregion
@@ -116,14 +126,6 @@ namespace RockSweeper
         private RockDomain _domain;
 
         /// <summary>
-        /// Gets the URL to be used when requesting files from Rock.
-        /// </summary>
-        /// <value>
-        /// The URL to be used when requesting files from Rock.
-        /// </value>
-        protected string GetFileUrl { get; private set; }
-
-        /// <summary>
         /// Gets the map of original e-mail addresses to new scrubbed e-mail addresses.
         /// </summary>
         /// <value>
@@ -163,26 +165,6 @@ namespace RockSweeper
         /// The geo lookup count.
         /// </value>
         protected int GeoLookupCount { get; private set; }
-
-        /// <summary>
-        /// Gets the primary state for the database.
-        /// </summary>
-        /// <value>
-        /// The primary state for the database.
-        /// </value>
-        protected string LocationPrimaryState
-        {
-            get
-            {
-                if ( _locationPrimaryState == null )
-                {
-                    _locationPrimaryState = SqlScalar<string>( "SELECT TOP 1 [State] FROM [Location] GROUP BY [State] ORDER BY COUNT(*) DESC" );
-                }
-
-                return _locationPrimaryState;
-            }
-        }
-        private string _locationPrimaryState;
 
         /// <summary>
         /// Gets the location city postal codes.
@@ -287,12 +269,8 @@ namespace RockSweeper
             ConnectionString = connectionString;
             RockWeb = rockWeb;
 
-            var internalApplicationRoot = GetGlobalAttributeValue( "InternalApplicationRoot" );
-            GetFileUrl = $"{ internalApplicationRoot }GetFile.ashx";
-
             EmailMap = new ConcurrentDictionary<string, string>();
             PhoneMap = new ConcurrentDictionary<string, string>();
-
             GeoLookupCache = new ConcurrentDictionary<string, Address>( Support.LoadGeocodeCache() );
 
             SetupDataFaker();
@@ -311,6 +289,21 @@ namespace RockSweeper
         #region Methods
 
         /// <summary>
+        /// Gets the base URL to use to retrieve a file from the server.
+        /// </summary>
+        /// <returns>A string representing the URL.</returns>
+        private async Task<string> GetFileUrlAsync()
+        {
+            if ( _getFileUrl == null )
+            {
+                var internalApplicationRoot = await GetGlobalAttributeValueAsync( "InternalApplicationRoot" );
+                _getFileUrl = $"{internalApplicationRoot}GetFile.ashx";
+            }
+
+            return _getFileUrl;
+        }
+
+        /// <summary>
         /// Handles sweeping the database in a background thread.
         /// </summary>
         public async Task ExecuteAsync( IList<SweeperOption> options )
@@ -318,7 +311,7 @@ namespace RockSweeper
             for ( int i = 0; i < options.Count; i++ )
             {
                 var option = options[i];
-                
+
                 OperationStarted?.Invoke( this, new ProgressEventArgs( option.Id, null, "Running" ) );
 
                 using ( var action = ( SweeperAction ) Activator.CreateInstance( option.ActionType ) )
@@ -397,15 +390,13 @@ namespace RockSweeper
         /// <param name="chunkSize">Size of the chunk to process at one time.</param>
         /// <param name="processor">The processor function to call for each chunk.</param>
         /// <param name="progress">The progress to call to indicate how far along we are (1 = 100%).</param>
-        public void ProcessItemsInParallel<T>( List<T> items, int chunkSize, Action<List<T>> processor, Action<double> progress )
+        public async Task ProcessItemsInParallelAsync<T>( List<T> items, int chunkSize, Func<List<T>, Task> processor, Action<double> progress )
         {
             int totalItems = items.Count;
             int processedItems = 0;
             var lockObject = new object();
-            var cancelProcessTokenSource = new CancellationTokenSource();
-            var cancelProcessToken = cancelProcessTokenSource.Token;
 
-            void ProcessChunk()
+            async Task ProcessChunk()
             {
                 List<T> chunkItems;
 
@@ -417,9 +408,9 @@ namespace RockSweeper
 
                 while ( chunkItems.Any() )
                 {
-                    processor( chunkItems );
+                    await processor( chunkItems );
 
-                    cancelProcessToken.ThrowIfCancellationRequested();
+                    CancellationToken.ThrowIfCancellationRequested();
 
                     lock ( lockObject )
                     {
@@ -438,31 +429,13 @@ namespace RockSweeper
             var tasks = new List<System.Threading.Tasks.Task>();
             for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
             {
-                var task = new System.Threading.Tasks.Task( ProcessChunk, cancelProcessToken );
-                tasks.Add( task );
-                task.Start();
+                tasks.Add( Task.Run( ProcessChunk, CancellationToken ) );
             }
 
             //
             // Wait for the tasks to complete. Also cancels tasks if we need to.
             //
-            while ( tasks.Any( t => !t.IsCompleted ) )
-            {
-                Thread.Sleep( 100 );
-
-                if ( CancellationToken.IsCancellationRequested || tasks.Any( t => t.IsFaulted ) )
-                {
-                    cancelProcessTokenSource.Cancel();
-                }
-            }
-
-            //
-            // If any task threw an exception, re-throw it.
-            //
-            if ( tasks.Any( t => t.IsFaulted ) )
-            {
-                throw tasks.First( t => t.IsFaulted ).Exception.InnerException;
-            }
+            await Task.WhenAll( tasks );
         }
 
         #endregion
@@ -482,11 +455,11 @@ namespace RockSweeper
                 {
                     if ( originalEmail.Contains( "@" ) )
                     {
-                        return $"user{ EmailMap.Count + 1 }@fakeinbox.com";
+                        return $"user{EmailMap.Count + 1}@fakeinbox.com";
                     }
                     else
                     {
-                        return $"user{ EmailMap.Count + 1 }";
+                        return $"user{EmailMap.Count + 1}";
                     }
                 }
             } );
@@ -528,7 +501,7 @@ namespace RockSweeper
                             Convert.ToChar( '0' + DataFaker.Random.Number( 0, 9 ) )
                         };
 
-                        number = number + new string( areaCode );
+                        number += new string( areaCode );
                     }
 
                     //
@@ -540,9 +513,9 @@ namespace RockSweeper
                         Convert.ToChar( '0' + DataFaker.Random.Number( 0, 9 ) ),
                         Convert.ToChar( '0' + DataFaker.Random.Number( 0, 9 ) )
                     };
-                    number = number + new string( exchangeCode );
+                    number += new string( exchangeCode );
 
-                    number = number + DataFaker.Random.Replace( "####" );
+                    number += DataFaker.Random.Replace( "####" );
 
                     return number;
                 }
@@ -558,7 +531,7 @@ namespace RockSweeper
 
             for ( int i = 0; i < newPhone.Length; i++ )
             {
-                if (char.IsDigit(newPhone[i]))
+                if ( char.IsDigit( newPhone[i] ) )
                 {
                     newPhone[i] = newPhoneDigits[digits++];
                 }
@@ -572,13 +545,29 @@ namespace RockSweeper
         #region Location Methods
 
         /// <summary>
+        /// Gets the primary state for the database.
+        /// </summary>
+        /// <value>
+        /// The primary state for the database.
+        /// </value>
+        private async Task<string> GetPrimaryStateAsync()
+        {
+            if ( _primaryState == null )
+            {
+                _primaryState = await SqlScalarAsync<string>( "SELECT TOP 1 [State] FROM [Location] GROUP BY [State] ORDER BY COUNT(*) DESC" );
+            }
+
+            return _primaryState;
+        }
+
+        /// <summary>
         /// Gets the best address for coordinates.
         /// </summary>
         /// <param name="coordinates">The coordinates.</param>
         /// <returns></returns>
-        public Address GetBestAddressForCoordinates( Coordinates coordinates )
+        public async Task<Address> GetBestAddressForCoordinatesAsync( Coordinates coordinates )
         {
-            Address address = GeoLookupCache.GetOrAdd( coordinates.ToString(), ( key ) =>
+            if ( !GeoLookupCache.TryGetValue( coordinates.ToString(), out var address ) )
             {
                 var client = new RestClient( "https://reverse.geocoder.api.here.com/6.2" );
                 var req = new RestRequest( "reversegeocode.json" );
@@ -588,16 +577,11 @@ namespace RockSweeper
                 req.AddParameter( "app_id", Properties.Settings.Default.HereAppId );
                 req.AddParameter( "app_code", Properties.Settings.Default.HereAppCode );
 
-                var resp = client.Execute<HereRestApi.ApiResponse<HereRestApi.LocationResult>>( req );
-
-                lock ( GeoLookupCache )
-                {
-                    GeoLookupCount += 1;
-                }
+                var resp = await client.ExecuteAsync<HereRestApi.ApiResponse<HereRestApi.LocationResult>>( req );
 
                 if ( !resp.Data.Response.View.Any() || !resp.Data.Response.View.First().Result.Any() )
                 {
-                    return new Address
+                    address = new Address
                     {
                         Street1 = DataFaker.Address.StreetAddress(),
                         City = DataFaker.Address.City(),
@@ -611,9 +595,9 @@ namespace RockSweeper
                 {
                     var location = resp.Data.Response.View.First().Result.First().Location;
 
-                    return new Address
+                    address = new Address
                     {
-                        Street1 = $"{ location.Address.HouseNumber } { location.Address.Street }",
+                        Street1 = $"{location.Address.HouseNumber} {location.Address.Street}",
                         City = location.Address.City,
                         State = location.Address.State,
                         County = location.Address.County,
@@ -621,7 +605,15 @@ namespace RockSweeper
                         Country = location.Address.Country.Substring( 0, 2 )
                     };
                 }
-            } );
+
+                if ( GeoLookupCache.TryAdd( coordinates.ToString(), address ) )
+                {
+                    lock ( GeoLookupCache )
+                    {
+                        GeoLookupCount += 1;
+                    }
+                }
+            }
 
             //
             // Save the cache every 100 lookups. That way, if there is a crash, we don't lose everything.
@@ -648,7 +640,7 @@ namespace RockSweeper
         /// <param name="postalCode">The postal code.</param>
         /// <param name="state">The state.</param>
         /// <param name="country">The country.</param>
-        public void UpdateLocationWithFakeData( int locationId, string street1, string street2, string county, string postalCode, string state, string country )
+        public async Task UpdateLocationWithFakeDataAsync( int locationId, string street1, string street2, string county, string postalCode, string state, string country )
         {
             var changes = new Dictionary<string, object>();
 
@@ -678,7 +670,7 @@ namespace RockSweeper
                     changes.Add( "State", DataFaker.Address.StateAbbr() );
                 }
             }
-            else if ( state != LocationPrimaryState )
+            else if ( state != await GetPrimaryStateAsync() )
             {
                 changes.Add( "Street1", DataFaker.Address.StreetAddress( street1.Contains( " Apt" ) ) );
                 changes.Add( "City", DataFaker.Address.City() );
@@ -732,7 +724,7 @@ namespace RockSweeper
                 }
             }
 
-            UpdateDatabaseRecord( "Location", locationId, changes );
+            await UpdateDatabaseRecordAsync( "Location", locationId, changes );
         }
 
         #endregion
@@ -758,7 +750,7 @@ namespace RockSweeper
         /// <typeparam name="T">The expected value type to be returned.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns>The value that resulted from the statement.</returns>
-        public T SqlScalar<T>( string sql )
+        public async Task<T> SqlScalarAsync<T>( string sql )
         {
             using ( var connection = GetDatabaseConnection() )
             {
@@ -767,7 +759,7 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    return ( T ) command.ExecuteScalar();
+                    return ( T ) await command.ExecuteScalarAsync();
                 }
             }
         }
@@ -778,7 +770,7 @@ namespace RockSweeper
         /// <typeparam name="T">The type of the return values.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<T> SqlQuery<T>( string sql )
+        public async Task<List<T>> SqlQueryAsync<T>( string sql )
         {
             var list = new List<T>();
 
@@ -789,11 +781,11 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
-                            var c1 = reader.IsDBNull( 0 ) ? default( T ) : ( T ) reader[0];
+                            var c1 = reader.IsDBNull( 0 ) ? default : ( T ) reader[0];
 
                             list.Add( c1 );
                         }
@@ -811,7 +803,7 @@ namespace RockSweeper
         /// <typeparam name="T2">The type of the return values in the second column.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<Tuple<T1, T2>> SqlQuery<T1, T2>( string sql )
+        public async Task<List<Tuple<T1, T2>>> SqlQueryAsync<T1, T2>( string sql )
         {
             var list = new List<Tuple<T1, T2>>();
 
@@ -822,12 +814,12 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
-                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
-                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
+                            var c1 = reader.IsDBNull( 0 ) ? default : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default : ( T2 ) reader[1];
 
                             list.Add( new Tuple<T1, T2>( c1, c2 ) );
                         }
@@ -846,7 +838,7 @@ namespace RockSweeper
         /// <typeparam name="T3">The type of the return values in the third column.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<Tuple<T1, T2, T3>> SqlQuery<T1, T2, T3>( string sql )
+        public async Task<List<Tuple<T1, T2, T3>>> SqlQueryAsync<T1, T2, T3>( string sql )
         {
             var list = new List<Tuple<T1, T2, T3>>();
 
@@ -857,13 +849,13 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
-                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
-                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
-                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
+                            var c1 = reader.IsDBNull( 0 ) ? default : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default : ( T3 ) reader[2];
 
                             list.Add( new Tuple<T1, T2, T3>( c1, c2, c3 ) );
                         }
@@ -883,7 +875,7 @@ namespace RockSweeper
         /// <typeparam name="T4">The type of the return values in the fourth column.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<Tuple<T1, T2, T3, T4>> SqlQuery<T1, T2, T3, T4>( string sql )
+        public async Task<List<Tuple<T1, T2, T3, T4>>> SqlQueryAsync<T1, T2, T3, T4>( string sql )
         {
             var list = new List<Tuple<T1, T2, T3, T4>>();
 
@@ -894,14 +886,14 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
-                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
-                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
-                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
-                            var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : ( T4 ) reader[3];
+                            var c1 = reader.IsDBNull( 0 ) ? default : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default : ( T3 ) reader[2];
+                            var c4 = reader.IsDBNull( 3 ) ? default : ( T4 ) reader[3];
 
                             list.Add( new Tuple<T1, T2, T3, T4>( c1, c2, c3, c4 ) );
                         }
@@ -922,7 +914,7 @@ namespace RockSweeper
         /// <typeparam name="T5">The type of the return values in the fifth column.</typeparam>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<Tuple<T1, T2, T3, T4, T5>> SqlQuery<T1, T2, T3, T4, T5>( string sql )
+        public async Task<List<Tuple<T1, T2, T3, T4, T5>>> SqlQueryAsync<T1, T2, T3, T4, T5>( string sql )
         {
             var list = new List<Tuple<T1, T2, T3, T4, T5>>();
 
@@ -933,15 +925,15 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
-                            var c1 = reader.IsDBNull( 0 ) ? default( T1 ) : ( T1 ) reader[0];
-                            var c2 = reader.IsDBNull( 1 ) ? default( T2 ) : ( T2 ) reader[1];
-                            var c3 = reader.IsDBNull( 2 ) ? default( T3 ) : ( T3 ) reader[2];
-                            var c4 = reader.IsDBNull( 3 ) ? default( T4 ) : ( T4 ) reader[3];
-                            var c5 = reader.IsDBNull( 4 ) ? default( T5 ) : ( T5 ) reader[4];
+                            var c1 = reader.IsDBNull( 0 ) ? default : ( T1 ) reader[0];
+                            var c2 = reader.IsDBNull( 1 ) ? default : ( T2 ) reader[1];
+                            var c3 = reader.IsDBNull( 2 ) ? default : ( T3 ) reader[2];
+                            var c4 = reader.IsDBNull( 3 ) ? default : ( T4 ) reader[3];
+                            var c5 = reader.IsDBNull( 4 ) ? default : ( T5 ) reader[4];
 
                             list.Add( new Tuple<T1, T2, T3, T4, T5>( c1, c2, c3, c4, c5 ) );
                         }
@@ -957,7 +949,7 @@ namespace RockSweeper
         /// </summary>
         /// <param name="sql">The SQL statement.</param>
         /// <returns></returns>
-        public List<Dictionary<string, object>> SqlQuery( string sql )
+        public async Task<List<Dictionary<string, object>>> SqlQueryAsync( string sql )
         {
             var list = new List<Dictionary<string, object>>();
 
@@ -968,7 +960,7 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
-                    using ( var reader = command.ExecuteReader() )
+                    using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
                         {
@@ -993,9 +985,9 @@ namespace RockSweeper
         /// </summary>
         /// <param name="sql">The SQL statement.</param>
         /// <returns>The number of rows affected.</returns>
-        public int SqlCommand( string sql )
+        public Task<int> SqlCommandAsync( string sql )
         {
-            return SqlCommand( sql, null );
+            return SqlCommandAsync( sql, null );
         }
 
         /// <summary>
@@ -1003,7 +995,7 @@ namespace RockSweeper
         /// </summary>
         /// <param name="sql">The SQL statement.</param>
         /// <returns>The number of rows affected.</returns>
-        public int SqlCommand( string sql, Dictionary<string, object> parameters )
+        public async Task<int> SqlCommandAsync( string sql, Dictionary<string, object> parameters )
         {
             using ( var connection = GetDatabaseConnection() )
             {
@@ -1020,7 +1012,7 @@ namespace RockSweeper
                         }
                     }
 
-                    return command.ExecuteNonQuery();
+                    return await command.ExecuteNonQueryAsync();
                 }
             }
         }
@@ -1031,7 +1023,7 @@ namespace RockSweeper
         /// <param name="tableName">Name of the table.</param>
         /// <param name="recordId">The record identifier.</param>
         /// <param name="updatedValues">The updated values.</param>
-        public void UpdateDatabaseRecord( string tableName, int recordId, Dictionary<string, object> updatedValues )
+        public async Task UpdateDatabaseRecordAsync( string tableName, int recordId, Dictionary<string, object> updatedValues )
         {
             if ( updatedValues.Any() )
             {
@@ -1042,25 +1034,25 @@ namespace RockSweeper
                     if ( updatedValues[k] is Coordinates coordinates )
                     {
                         updatedValues.Remove( k );
-                        updatedValues.Add( $"{ k }Latitude", coordinates.Latitude );
-                        updatedValues.Add( $"{ k }Longitude", coordinates.Longitude );
+                        updatedValues.Add( $"{k}Latitude", coordinates.Latitude );
+                        updatedValues.Add( $"{k}Longitude", coordinates.Longitude );
 
-                        updateStrings.Add( $"[{ k }] = geography::Point(@{ k }Latitude, @{ k }Longitude, 4326)" );
+                        updateStrings.Add( $"[{k}] = geography::Point(@{k}Latitude, @{k}Longitude, 4326)" );
                     }
                     else
                     {
-                        updateStrings.Add( $"[{ k }] = @{ k }" );
+                        updateStrings.Add( $"[{k}] = @{k}" );
                     }
                 }
 
                 try
                 {
-                    SqlCommand( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }", updatedValues );
+                    await SqlCommandAsync( $"UPDATE [{tableName}] SET {string.Join( ", ", updateStrings )} WHERE [Id] = {recordId}", updatedValues );
                 }
                 catch ( Exception e )
                 {
-                    System.Diagnostics.Debug.WriteLine( $"{ e.Message }:" );
-                    System.Diagnostics.Debug.WriteLine( $"UPDATE [{ tableName }] SET { string.Join( ", ", updateStrings ) } WHERE [Id] = { recordId }" );
+                    System.Diagnostics.Debug.WriteLine( $"{e.Message}:" );
+                    System.Diagnostics.Debug.WriteLine( $"UPDATE [{tableName}] SET {string.Join( ", ", updateStrings )} WHERE [Id] = {recordId}" );
                     System.Diagnostics.Debug.WriteLine( Newtonsoft.Json.JsonConvert.SerializeObject( updatedValues, Newtonsoft.Json.Formatting.Indented ) );
 
                     throw e;
@@ -1074,7 +1066,7 @@ namespace RockSweeper
         /// <param name="tableName">Name of the table to update.</param>
         /// <param name="records">The records to be updated.</param>
         /// <exception cref="Exception">Unknown column type '' in bulk update.</exception>
-        public void UpdateDatabaseRecords( string tableName, List<Tuple<int, Dictionary<string, object>>> records )
+        public async Task UpdateDatabaseRecordsAsync( string tableName, List<Tuple<int, Dictionary<string, object>>> records )
         {
             if ( !records.Any() )
             {
@@ -1134,28 +1126,28 @@ namespace RockSweeper
                     {
                         if ( c.DataType == typeof( string ) )
                         {
-                            columns.Add( $"[{ c.ColumnName }] [varchar](max) NULL" );
+                            columns.Add( $"[{c.ColumnName}] [varchar](max) NULL" );
                         }
-                        else if ( c.DataType == typeof(int))
+                        else if ( c.DataType == typeof( int ) )
                         {
-                            columns.Add( $"[{ c.ColumnName }] [int] NULL" );
+                            columns.Add( $"[{c.ColumnName}] [int] NULL" );
                         }
                         else
                         {
-                            throw new Exception( $"Unknown column type '{ c.DataType.FullName }' in bulk update." );
+                            throw new Exception( $"Unknown column type '{c.DataType.FullName}' in bulk update." );
                         }
 
                         if ( c.ColumnName != "Id" )
                         {
-                            setColumns.Add( $"T.[{ c.ColumnName }] = ISNULL(U.[{ c.ColumnName }], T.[{ c.ColumnName }])" );
+                            setColumns.Add( $"T.[{c.ColumnName}] = ISNULL(U.[{c.ColumnName}], T.[{c.ColumnName}])" );
                         }
                     }
 
                     //
                     // Create a temporary table to bulk insert our changes into.
                     //
-                    command.CommandText = $"CREATE TABLE #BulkUpdate({ string.Join( ",", columns ) })";
-                    command.ExecuteNonQuery();
+                    command.CommandText = $"CREATE TABLE #BulkUpdate({string.Join( ",", columns )})";
+                    await command.ExecuteNonQueryAsync();
 
                     //
                     // Use SqlBulkCopy to insert all the changes in bulk.
@@ -1171,8 +1163,8 @@ namespace RockSweeper
                     // Now run a SQL statement that updates any non-NULL columns into the real table.
                     //
                     command.CommandTimeout = 300;
-                    command.CommandText = $"UPDATE T SET { string.Join( ",", setColumns ) } FROM [{ tableName }] AS T INNER JOIN #BulkUpdate AS U ON U.[Id] = T.[Id]";
-                    command.ExecuteNonQuery();
+                    command.CommandText = $"UPDATE T SET {string.Join( ",", setColumns )} FROM [{tableName}] AS T INNER JOIN #BulkUpdate AS U ON U.[Id] = T.[Id]";
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
@@ -1186,9 +1178,9 @@ namespace RockSweeper
         /// </summary>
         /// <param name="entityType">Type of the entity.</param>
         /// <returns></returns>
-        public int? GetEntityTypeId( string entityType )
+        public Task<int?> GetEntityTypeIdAsync( string entityType )
         {
-            return SqlScalar<int?>( $"SELECT [Id] FROM [EntityType] WHERE [Name] = '{ entityType }'" );
+            return SqlScalarAsync<int?>( $"SELECT [Id] FROM [EntityType] WHERE [Name] = '{entityType}'" );
         }
 
         /// <summary>
@@ -1196,27 +1188,27 @@ namespace RockSweeper
         /// </summary>
         /// <param name="fieldType">Type of the field.</param>
         /// <returns></returns>
-        public int? GetFieldTypeId( string fieldType )
+        public Task<int?> GetFieldTypeIdAsync( string fieldType )
         {
-            return SqlScalar<int?>( $"SELECT [Id] FROM [FieldType] WHERE [Class] = '{ fieldType }'" );
+            return SqlScalarAsync<int?>( $"SELECT [Id] FROM [FieldType] WHERE [Class] = '{fieldType}'" );
         }
 
         /// <summary>
         /// Disables a single component with the given class name.
         /// </summary>
         /// <param name="componentType">Type of the component.</param>
-        public void DisableComponentType( string componentType )
+        public async Task DisableComponentTypeAsync( string componentType )
         {
-            var entityTypeId = GetEntityTypeId( componentType );
+            var entityTypeId = await GetEntityTypeIdAsync( componentType );
 
             if ( entityTypeId.HasValue )
             {
-                SqlCommand( $@"UPDATE AV
+                await SqlCommandAsync( $@"UPDATE AV
 SET AV.[Value] = 'False'
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 WHERE AV.EntityId = 0
-  AND A.[EntityTypeId] = { entityTypeId.Value }
+  AND A.[EntityTypeId] = {entityTypeId.Value}
   AND A.[Key] = 'Active'" );
             }
         }
@@ -1225,17 +1217,17 @@ WHERE AV.EntityId = 0
         /// Deletes the attribute values for component.
         /// </summary>
         /// <param name="componentType">Type of the component.</param>
-        public void DeleteAttributeValuesForComponentType( string componentType )
+        public async Task DeleteAttributeValuesForComponentTypeAsync( string componentType )
         {
-            var entityTypeId = GetEntityTypeId( componentType );
+            var entityTypeId = await GetEntityTypeIdAsync( componentType );
 
             if ( entityTypeId.HasValue )
             {
-                SqlCommand( $@"DELETE AV
+                await SqlCommandAsync( $@"DELETE AV
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 WHERE AV.EntityId = 0
-  AND A.[EntityTypeId] = { entityTypeId.Value }" );
+  AND A.[EntityTypeId] = {entityTypeId.Value}" );
             }
         }
 
@@ -1244,13 +1236,13 @@ WHERE AV.EntityId = 0
         /// </summary>
         /// <param name="componentType">Type of the component.</param>
         /// <param name="excludedTypes">The types to be excluded.</param>
-        public void DisableComponentsOfType( string componentType, string[] excludedTypes = null )
+        public async Task DisableComponentsOfTypeAsync( string componentType, string[] excludedTypes = null )
         {
             var types = Domain.FindTypes( componentType ).Where( t => excludedTypes == null || !excludedTypes.Contains( t ) );
 
             foreach ( var type in types )
             {
-                DisableComponentType( type );
+                await DisableComponentTypeAsync( type );
             }
         }
 
@@ -1259,13 +1251,13 @@ WHERE AV.EntityId = 0
         /// </summary>
         /// <param name="componentType">Type of the component.</param>
         /// <param name="excludedTypes">The types to be excluded.</param>
-        public void DeleteAttributeValuesForComponentsOfType( string componentType, string[] excludedTypes = null )
+        public async Task DeleteAttributeValuesForComponentsOfTypeAsync( string componentType, string[] excludedTypes = null )
         {
             var types = Domain.FindTypes( componentType ).Where( t => excludedTypes == null || !excludedTypes.Contains( t ) );
 
             foreach ( var type in types )
             {
-                DeleteAttributeValuesForComponentType( type );
+                await DeleteAttributeValuesForComponentTypeAsync( type );
             }
         }
 
@@ -1274,10 +1266,10 @@ WHERE AV.EntityId = 0
         /// </summary>
         /// <param name="key">The key.</param>
         /// <returns></returns>
-        public string GetGlobalAttributeValue( string key )
+        public async Task<string> GetGlobalAttributeValueAsync( string key )
         {
-            var defaultValue = SqlQuery<int, string>( $"SELECT [Id], [DefaultValue] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" ).First();
-            var value = SqlScalar<string>( $"SELECT [Value] FROM [AttributeValue] WHERE [AttributeId] = { defaultValue.Item1 }" );
+            var defaultValue = ( await SqlQueryAsync<int, string>( $"SELECT [Id], [DefaultValue] FROM [Attribute] WHERE [Key] = '{key}' AND [EntityTypeId] IS NULL" ) ).First();
+            var value = await SqlScalarAsync<string>( $"SELECT [Value] FROM [AttributeValue] WHERE [AttributeId] = {defaultValue.Item1}" );
 
             return !string.IsNullOrEmpty( value ) ? value : defaultValue.Item2;
         }
@@ -1287,16 +1279,16 @@ WHERE AV.EntityId = 0
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
-        public void SetGlobalAttributeValue( string key, string value )
+        public async Task SetGlobalAttributeValue( string key, string value )
         {
-            var attributeId = SqlScalar<int?>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{ key }' AND [EntityTypeId] IS NULL" );
+            var attributeId = await SqlScalarAsync<int?>( $"SELECT [Id] FROM [Attribute] WHERE [Key] = '{key}' AND [EntityTypeId] IS NULL" );
 
             if ( !attributeId.HasValue )
             {
                 return;
             }
 
-            var attributeValueId = SqlScalar<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = { attributeId.Value }" );
+            var attributeValueId = await SqlScalarAsync<int?>( $"SELECT [Id] FROM [AttributeValue] WHERE [AttributeId] = {attributeId.Value}" );
             var parameters = new Dictionary<string, object>
             {
                 { "Value", value }
@@ -1304,11 +1296,11 @@ WHERE AV.EntityId = 0
 
             if ( attributeValueId.HasValue )
             {
-                SqlCommand( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = { attributeValueId.Value }", parameters );
+                await SqlCommandAsync( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = {attributeValueId.Value}", parameters );
             }
             else
             {
-                SqlCommand( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, { attributeId.Value }, @Value, NEWID())", parameters );
+                await SqlCommandAsync( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, {attributeId.Value}, @Value, NEWID())", parameters );
             }
         }
 
@@ -1318,13 +1310,13 @@ WHERE AV.EntityId = 0
         /// <param name="entityType">Type of the entity.</param>
         /// <param name="attributeKey">The attribute key.</param>
         /// <param name="value">The value.</param>
-        public void SetComponentAttributeValue( string entityType, string attributeKey, string value )
+        public Task SetComponentAttributeValue( string entityType, string attributeKey, string value )
         {
-            SqlCommand( $@"DECLARE @AttributeId int = (SELECT A.[Id] FROM [Attribute] AS A INNER JOIN [EntityType] AS ET ON ET.[Id] = A.[EntityTypeId] WHERE ET.[Name] = '{ entityType }' AND A.[Key] = '{ attributeKey }')
+            return SqlCommandAsync( $@"DECLARE @AttributeId int = (SELECT A.[Id] FROM [Attribute] AS A INNER JOIN [EntityType] AS ET ON ET.[Id] = A.[EntityTypeId] WHERE ET.[Name] = '{entityType}' AND A.[Key] = '{attributeKey}')
 IF EXISTS (SELECT * FROM [AttributeValue] WHERE [AttributeId] = @AttributeId)
-	UPDATE [AttributeValue] SET [Value] = '{ value }' WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
+	UPDATE [AttributeValue] SET [Value] = '{value}' WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
 ELSE
-	INSERT INTO [AttributeValue] ([IsSystem], [AttributeId], [EntityId], [Value], [Guid]) VALUES (0, @AttributeId, 0, '{ value }', NEWID())" );
+	INSERT INTO [AttributeValue] ([IsSystem], [AttributeId], [EntityId], [Value], [Guid]) VALUES (0, @AttributeId, 0, '{value}', NEWID())" );
         }
 
         /// <summary>
@@ -1332,18 +1324,18 @@ ELSE
         /// </summary>
         /// <param name="binaryFileId">The binary file identifier.</param>
         /// <returns></returns>
-        public MemoryStream GetFileDataFromRock( int binaryFileId )
+        public async Task<MemoryStream> GetFileDataFromRockAsync( int binaryFileId )
         {
-            var url = $"{ GetFileUrl }?Id={ binaryFileId }";
+            var url = $"{await GetFileUrlAsync()}?Id={binaryFileId}";
             var client = new WebClient();
 
             try
             {
                 var ms = new MemoryStream();
 
-                using ( var stream = client.OpenRead( url ) )
+                using ( var stream = await client.OpenReadTaskAsync( url ) )
                 {
-                    stream.CopyTo( ms );
+                    await stream.CopyToAsync( ms );
                 }
 
                 ms.Seek( 0, SeekOrigin.Begin );
@@ -1361,18 +1353,18 @@ ELSE
         /// </summary>
         /// <param name="binaryFileGuid">The binary file identifier.</param>
         /// <returns></returns>
-        public MemoryStream GetFileDataFromRock( Guid binaryFileGuid )
+        public async Task<MemoryStream> GetFileDataFromRockAsync( Guid binaryFileGuid )
         {
-            var url = $"{ GetFileUrl }?Guid={ binaryFileGuid }";
+            var url = $"{await GetFileUrlAsync()}?Guid={binaryFileGuid}";
             var client = new WebClient();
 
             try
             {
                 var ms = new MemoryStream();
 
-                using ( var stream = client.OpenRead( url ) )
+                using ( var stream = await client.OpenReadTaskAsync( url ) )
                 {
-                    stream.CopyTo( ms );
+                    await stream.CopyToAsync( ms );
                 }
 
                 ms.Seek( 0, SeekOrigin.Begin );
@@ -1390,9 +1382,9 @@ ELSE
         /// </summary>
         /// <param name="binaryFileId">The binary file identifier.</param>
         /// <returns></returns>
-        public MemoryStream GetFileDataFromBinaryFileData( int binaryFileId )
+        public async Task<MemoryStream> GetFileDataFromBinaryFileDataAsync( int binaryFileId )
         {
-            var data = SqlScalar<byte[]>( $"SELECT [Content] FROM [BinaryFileData] WHERE [Id] = { binaryFileId }" );
+            var data = await SqlScalarAsync<byte[]>( $"SELECT [Content] FROM [BinaryFileData] WHERE [Id] = {binaryFileId}" );
 
             if ( data == null )
             {
@@ -1524,9 +1516,9 @@ ELSE
         /// <param name="replacement">The replacement function to provide the new value.</param>
         /// <param name="step">The step number.</param>
         /// <param name="stepCount">The step count.</param>
-        public void ScrubTableTextColumn( string tableName, string columnName, Func<string, string> replacement, Action<double> progress = null )
+        public async Task ScrubTableTextColumnAsync( string tableName, string columnName, Func<string, string> replacement, Action<double> progress = null )
         {
-            ScrubTableTextColumns( tableName, new[] { columnName }, replacement, progress );
+            await ScrubTableTextColumnsAsync( tableName, new[] { columnName }, replacement, progress );
         }
 
         /// <summary>
@@ -1537,16 +1529,16 @@ ELSE
         /// <param name="replacement">The replacement function to provide the new value.</param>
         /// <param name="step">The step number.</param>
         /// <param name="stepCount">The step count.</param>
-        public void ScrubTableTextColumns( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, Action<double> progress = null )
+        public async Task ScrubTableTextColumnsAsync( string tableName, IEnumerable<string> columnNames, Func<string, string> replacement, Action<double> progress = null )
         {
             string columns = string.Join( "], [", columnNames );
-            var rowIds = SqlQuery<int>( $"SELECT [Id] FROM [{tableName}] ORDER BY [Id]" );
+            var rowIds = await SqlQueryAsync<int>( $"SELECT [Id] FROM [{tableName}] ORDER BY [Id]" );
 
             CancellationToken.ThrowIfCancellationRequested();
 
-            ProcessItemsInParallel( rowIds, 1000, ( itemIds ) =>
+            await ProcessItemsInParallelAsync( rowIds, 1000, async ( itemIds ) =>
             {
-                var rows = SqlQuery( $"SELECT [Id], [{columns}] FROM [{tableName}] WHERE [Id] IN ({string.Join( ",", itemIds )})" );
+                var rows = await SqlQueryAsync( $"SELECT [Id], [{columns}] FROM [{tableName}] WHERE [Id] IN ({string.Join( ",", itemIds )})" );
 
                 for ( int i = 0; i < rows.Count; i++ )
                 {
@@ -1570,7 +1562,7 @@ ELSE
 
                     if ( updatedValues.Any() )
                     {
-                        UpdateDatabaseRecord( tableName, valueId, updatedValues );
+                        await UpdateDatabaseRecordAsync( tableName, valueId, updatedValues );
                     }
                 }
             }, ( p ) =>

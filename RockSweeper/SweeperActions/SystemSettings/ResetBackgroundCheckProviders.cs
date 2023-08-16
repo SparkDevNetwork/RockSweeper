@@ -16,11 +16,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetBackgroundCheckProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Security.BackgroundCheckComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Security.BackgroundCheckComponent" );
         }
     }
 }

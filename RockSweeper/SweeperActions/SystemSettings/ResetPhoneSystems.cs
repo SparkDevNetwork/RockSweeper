@@ -16,11 +16,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetPhoneSystems : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Pbx.PbxComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Pbx.PbxComponent" );
         }
     }
 }

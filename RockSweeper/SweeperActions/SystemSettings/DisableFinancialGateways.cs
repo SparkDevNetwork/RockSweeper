@@ -16,15 +16,13 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [DefaultValue( true )]
     public class DisableFinancialGateways : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SqlCommand( $@"UPDATE FG
+            await Sweeper.SqlCommandAsync( $@"UPDATE FG
 SET FG.[IsActive] = 0
 FROM [FinancialGateway] AS FG
 INNER JOIN[EntityType] AS ET ON ET.[Id] = FG.[EntityTypeId]
 WHERE ET.[Name] != 'Rock.Financial.TestGateway'" );
-
-            return Task.CompletedTask;
         }
     }
 }

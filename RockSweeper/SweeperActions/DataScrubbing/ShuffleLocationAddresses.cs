@@ -18,7 +18,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class ShuffleLocationAddresses : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             List<int> idNumbers;
             int stepCount = 3;
@@ -26,7 +26,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Step 1: Shuffle all locations that are not geo-coded.
             //
-            var locations = Sweeper.SqlQuery( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
+            var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
             idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
             for ( int i = 0; i < locations.Count; i++ )
             {
@@ -35,7 +35,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 locations[i].Remove( "Id" );
 
-                Sweeper.UpdateDatabaseRecord( "Location", locationId, locations[i] );
+                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, locations[i] );
 
                 Progress( i / ( double ) locations.Count, 1, stepCount );
             }
@@ -44,14 +44,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             // Step 2: Shuffle all locations with a valid GeoPoint inside our radius.
             //
             double radiusDistance = 35 * 1609.344;
-            var centerLocationGuid = Sweeper.GetGlobalAttributeValue( "OrganizationAddress" );
-            var centerLocationValues = Sweeper.SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" );
+            var centerLocationGuid = Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
+            var centerLocationValues = await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" );
             var centerLocation = centerLocationValues.Any()
-                ? new Coordinates( Sweeper.SqlQuery<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ).First() )
+                ? new Coordinates( ( await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ) ).First() )
                 : null;
 
             var geoLocations = centerLocation != null
-                ? Sweeper.SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" )
+                ? await Sweeper.SqlQueryAsync( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" )
                 : new List<Dictionary<string, object>>();
 
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
@@ -65,7 +65,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 geoLocations[i].Remove( "Lat" );
                 geoLocations[i].Remove( "Long" );
 
-                Sweeper.UpdateDatabaseRecord( "Location", locationId, geoLocations[i] );
+                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, geoLocations[i] );
 
                 Progress( i / ( double ) geoLocations.Count, 2, stepCount );
             }
@@ -74,7 +74,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             // Step 3: Shuffle all locations with a valid GeoPoint outside our radius.
             //
             geoLocations = centerLocation != null
-                ? Sweeper.SqlQuery( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" )
+                ? await Sweeper.SqlQueryAsync( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" )
                 : new List<Dictionary<string, object>>();
 
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
@@ -88,12 +88,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 geoLocations[i].Remove( "Lat" );
                 geoLocations[i].Remove( "Long" );
 
-                Sweeper.UpdateDatabaseRecord( "Location", locationId, geoLocations[i] );
+                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, geoLocations[i] );
 
                 Progress( i / ( double ) geoLocations.Count, 3, stepCount );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

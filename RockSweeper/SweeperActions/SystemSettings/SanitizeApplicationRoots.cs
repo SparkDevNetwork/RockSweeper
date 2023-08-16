@@ -16,12 +16,10 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [DefaultValue( true )]
     public class SanitizeApplicationRoots : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SetGlobalAttributeValue( "InternalApplicationRoot", "http://rock.example.org" );
-            Sweeper.SetGlobalAttributeValue( "PublicApplicationRoot", "http://www.example.org" );
-
-            return Task.CompletedTask;
+            await Sweeper.SetGlobalAttributeValue( "InternalApplicationRoot", "http://rock.example.org" );
+            await Sweeper.SetGlobalAttributeValue( "PublicApplicationRoot", "http://www.example.org" );
         }
     }
 }

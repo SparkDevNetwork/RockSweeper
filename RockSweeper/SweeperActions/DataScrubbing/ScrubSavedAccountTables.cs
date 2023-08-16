@@ -17,10 +17,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class ScrubSavedAccountTables : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             // Process all the saved account records.
-            var accounts = Sweeper.SqlQuery<int, string, string, string, string>( "SELECT [Id], [ReferenceNumber], [Name], [TransactionCode], [GatewayPersonIdentifier] FROM [FinancialPersonSavedAccount]" );
+            var accounts = await Sweeper.SqlQueryAsync<int, string, string, string, string>( "SELECT [Id], [ReferenceNumber], [Name], [TransactionCode], [GatewayPersonIdentifier] FROM [FinancialPersonSavedAccount]" );
             var gatewayPersonIdentifierLookup = accounts
                 .Select( a => a.Item5 )
                 .Distinct()
@@ -40,12 +40,12 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 updates.Add( new Tuple<int, Dictionary<string, object>>( account.Item1, newData ) );
             }
 
-            Sweeper.UpdateDatabaseRecords( "FinancialPersonSavedAccount", updates );
+            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonSavedAccount", updates );
 
             Progress( 0.5 );
 
             // Process all the bank account records.
-            var bankAccounts = Sweeper.SqlQuery<int, string, string>( "SELECT [Id], [AccountNumberSecured], [AccountNumberMasked] FROM [FinancialPersonBankAccount]" );
+            var bankAccounts = await Sweeper.SqlQueryAsync<int, string, string>( "SELECT [Id], [AccountNumberSecured], [AccountNumberMasked] FROM [FinancialPersonBankAccount]" );
             gatewayPersonIdentifierLookup = accounts
                 .Select( a => a.Item5 )
                 .Distinct()
@@ -63,9 +63,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 updates.Add( new Tuple<int, Dictionary<string, object>>( account.Item1, newData ) );
             }
 
-            Sweeper.UpdateDatabaseRecords( "FinancialPersonBankAccount", updates );
-
-            return Task.CompletedTask;
+            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonBankAccount", updates );
         }
     }
 }

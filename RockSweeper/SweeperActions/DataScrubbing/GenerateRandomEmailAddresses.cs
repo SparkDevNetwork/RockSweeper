@@ -17,7 +17,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class GenerateRandomEmailAddresses : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             var scrubTables = Sweeper.MergeScrubTableDictionaries( Sweeper.ScrubCommonTables, Sweeper.ScrubEmailTables );
             int stepCount = 4 + scrubTables.Count - 1;
@@ -28,8 +28,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             // 10.43 multi-threaded.
             // 4.26 multi-threaded bulk update.
             //
-            var peopleAddresses = Sweeper.SqlQuery<int, string>( "SELECT [Id], [Email] FROM [Person] WHERE [Email] IS NOT NULL AND [Email] != ''" );
-            Sweeper.ProcessItemsInParallel( peopleAddresses, 1000, ( items ) =>
+            var peopleAddresses = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Email] FROM [Person] WHERE [Email] IS NOT NULL AND [Email] != ''" );
+            await Sweeper.ProcessItemsInParallelAsync( peopleAddresses, 1000, async ( items ) =>
             {
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
@@ -45,7 +45,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( bulkChanges.Any() )
                 {
-                    Sweeper.UpdateDatabaseRecords( "Person", bulkChanges );
+                    await Sweeper.UpdateDatabaseRecordsAsync( "Person", bulkChanges );
                 }
             }, ( p ) =>
             {
@@ -57,16 +57,16 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             var fieldTypeIds = new List<int>
             {
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.TextFieldType" ).Value,
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.EmailFieldType" ).Value,
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.CodeEditorFieldType" ).Value,
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.HtmlFieldType" ).Value,
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.MarkdownFieldType" ).Value,
-                Sweeper.GetFieldTypeId( "Rock.Field.Types.MemoFieldType" ).Value
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.TextFieldType" ) ).Value,
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.EmailFieldType" ) ).Value,
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.CodeEditorFieldType" ) ).Value,
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.HtmlFieldType" ) ).Value,
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.MarkdownFieldType" ) ).Value,
+                ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.MemoFieldType" ) ).Value
             };
 
-            var attributeValues = Sweeper.SqlQuery<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) )}) AND AV.[Value] LIKE '%@%'" );
-            Sweeper.ProcessItemsInParallel( attributeValues, 1000, ( items ) =>
+            var attributeValues = await Sweeper.SqlQueryAsync<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) )}) AND AV.[Value] LIKE '%@%'" );
+            await Sweeper.ProcessItemsInParallelAsync( attributeValues, 1000, async ( items ) =>
             {
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
@@ -85,7 +85,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     }
                 }
 
-                Sweeper.UpdateDatabaseRecords( "AttributeValue", bulkChanges );
+                await Sweeper.UpdateDatabaseRecordsAsync( "AttributeValue", bulkChanges );
             }, ( p ) =>
             {
                 Progress( p, 2, stepCount );
@@ -94,10 +94,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Stage 3: Scrub the global attributes.
             //
-            var attributeValue = Sweeper.GetGlobalAttributeValue( "EmailExceptionsList" );
-            Sweeper.SetGlobalAttributeValue( "EmailExceptionsList", Sweeper.ScrubContentForEmailAddresses( attributeValue ) );
-            attributeValue = Sweeper.GetGlobalAttributeValue( "OrganizationEmail" );
-            Sweeper.SetGlobalAttributeValue( "OrganizationEmail", Sweeper.ScrubContentForEmailAddresses( attributeValue ) );
+            var attributeValue = await Sweeper.GetGlobalAttributeValueAsync( "EmailExceptionsList" );
+            await Sweeper.SetGlobalAttributeValue( "EmailExceptionsList", Sweeper.ScrubContentForEmailAddresses( attributeValue ) );
+            attributeValue = await Sweeper.GetGlobalAttributeValueAsync( "OrganizationEmail" );
+            await Sweeper.SetGlobalAttributeValue( "OrganizationEmail", Sweeper.ScrubContentForEmailAddresses( attributeValue ) );
             Progress( 1.0, 3, stepCount );
 
             //
@@ -106,15 +106,13 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             int tableStep = 0;
             foreach ( var tc in scrubTables )
             {
-                Sweeper.ScrubTableTextColumns( tc.Key, tc.Value, Sweeper.ScrubContentForEmailAddresses, p =>
+                await Sweeper.ScrubTableTextColumnsAsync( tc.Key, tc.Value, Sweeper.ScrubContentForEmailAddresses, p =>
                 {
                     Progress( p, 4 + tableStep, stepCount );
                 } );
 
                 tableStep++;
             }
-
-            return Task.CompletedTask;
         }
     }
 }

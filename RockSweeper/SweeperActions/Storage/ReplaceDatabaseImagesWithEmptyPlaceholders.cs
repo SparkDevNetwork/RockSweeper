@@ -20,17 +20,17 @@ namespace RockSweeper.SweeperActions.Storage
     [AfterAction( typeof( MoveBinaryFilesIntoDatabase ) )]
     public class ReplaceDatabaseImagesWithEmptyPlaceholders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var databaseEntityTypeId = Sweeper.GetEntityTypeId( "Rock.Storage.Provider.Database" );
+            var databaseEntityTypeId = await Sweeper.GetEntityTypeIdAsync( "Rock.Storage.Provider.Database" );
             int completedCount = 0;
             double fileCount = 0;
 
-            var files = Sweeper.SqlQuery<int, string, long?, int?, int?>( $"SELECT [Id],[FileName],[FileSize],[Width],[Height] FROM [BinaryFile] WHERE [StorageEntityTypeId] = {databaseEntityTypeId}" )
+            var files = ( await Sweeper.SqlQueryAsync<int, string, long?, int?, int?>( $"SELECT [Id],[FileName],[FileSize],[Width],[Height] FROM [BinaryFile] WHERE [StorageEntityTypeId] = {databaseEntityTypeId}" ) )
                 .Where( f => Sweeper.IsFileNameImage( f.Item2 ) )
                 .ToList();
 
-            void processFile( Tuple<int, string, long?, int?, int?> file )
+            async Task processFile( Tuple<int, string, long?, int?, int?> file )
             {
                 int fileId = file.Item1;
                 string filename = file.Item2;
@@ -65,13 +65,13 @@ namespace RockSweeper.SweeperActions.Storage
 
                     if ( sets.Any() )
                     {
-                        Sweeper.SqlCommand( $"UPDATE [BinaryFile] SET {string.Join( ", ", sets )} WHERE [Id] = {fileId}", parameters );
+                        await Sweeper.SqlCommandAsync( $"UPDATE [BinaryFile] SET {string.Join( ", ", sets )} WHERE [Id] = {fileId}", parameters );
                     }
 
                     //
                     // Update the image content.
                     //
-                    Sweeper.SqlCommand( $"UPDATE [BinaryFileData] SET [Content] = @Content WHERE [Id] = {fileId}", new Dictionary<string, object>
+                    await Sweeper.SqlCommandAsync( $"UPDATE [BinaryFileData] SET [Content] = @Content WHERE [Id] = {fileId}", new Dictionary<string, object>
                     {
                         { "Content", imageStream }
                     } );
@@ -84,7 +84,7 @@ namespace RockSweeper.SweeperActions.Storage
             {
                 Sweeper.CancellationToken.ThrowIfCancellationRequested();
 
-                processFile( file );
+                await processFile( file );
 
                 completedCount += 1;
 
@@ -93,8 +93,6 @@ namespace RockSweeper.SweeperActions.Storage
                     Progress( completedCount / fileCount );
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

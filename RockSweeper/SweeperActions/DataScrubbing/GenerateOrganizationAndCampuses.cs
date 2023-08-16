@@ -16,15 +16,15 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class GenerateOrganizationAndCampuses : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
             string organizationCity = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
 
-            Sweeper.SetGlobalAttributeValue( "OrganizationName", $"{organizationCity} Community Church" );
-            Sweeper.SetGlobalAttributeValue( "OrganizationAbbreviation", $"{organizationCity} Community Church" );
-            Sweeper.SetGlobalAttributeValue( "OrganizationWebsite", $"http://www.{organizationCity.Replace( " ", "" ).ToLower()}communitychurch.org/" );
+            await Sweeper.SetGlobalAttributeValue( "OrganizationName", $"{organizationCity} Community Church" );
+            await Sweeper.SetGlobalAttributeValue( "OrganizationAbbreviation", $"{organizationCity} Community Church" );
+            await Sweeper.SetGlobalAttributeValue( "OrganizationWebsite", $"http://www.{organizationCity.Replace( " ", "" ).ToLower()}communitychurch.org/" );
 
-            var campuses = Sweeper.SqlQuery<int, string, string, string>( "SELECT [Id], [Url], [Description], [ShortCode] FROM [Campus]" );
+            var campuses = await Sweeper.SqlQueryAsync<int, string, string, string>( "SELECT [Id], [Url], [Description], [ShortCode] FROM [Campus]" );
             foreach ( var campus in campuses )
             {
                 var campusCityName = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
@@ -49,10 +49,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     changes.Add( "ShortCode", campusCityName.Substring( 0, 3 ).ToUpper() );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "Campus", campus.Item1, changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "Campus", campus.Item1, changes );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

@@ -17,11 +17,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class DisablePhoneSystems : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DisableComponentsOfType( "Rock.Pbx.PbxComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DisableComponentsOfTypeAsync( "Rock.Pbx.PbxComponent" );
         }
     }
 }

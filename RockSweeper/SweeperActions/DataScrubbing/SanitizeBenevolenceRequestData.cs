@@ -17,9 +17,9 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class SanitizeBenevolenceRequestData : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var queryData = Sweeper.SqlQuery<int, string, string, string>( "SELECT [Id],[GovernmentId],[RequestText],[ResultSummary] FROM [BenevolenceRequest]" );
+            var queryData = await Sweeper.SqlQueryAsync<int, string, string, string>( "SELECT [Id],[GovernmentId],[RequestText],[ResultSummary] FROM [BenevolenceRequest]" );
             var wordRegex = new Regex( "([a-zA-Z]+)" );
 
             for ( int i = 0; i < queryData.Count; i++ )
@@ -53,13 +53,11 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( changes.Any() )
                 {
-                    Sweeper.UpdateDatabaseRecord( "BenevolenceRequest", queryData[i].Item1, changes );
+                    await Sweeper.UpdateDatabaseRecordAsync( "BenevolenceRequest", queryData[i].Item1, changes );
                 }
 
                 Progress( i / ( double ) queryData.Count );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

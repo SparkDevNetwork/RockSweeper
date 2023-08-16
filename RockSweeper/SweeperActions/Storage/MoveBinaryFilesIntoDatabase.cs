@@ -17,11 +17,11 @@ namespace RockSweeper.SweeperActions.Storage
     [Category( "Storage" )]
     public class MoveBinaryFilesIntoDatabase : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var databaseEntityTypeId = Sweeper.GetEntityTypeId( "Rock.Storage.Provider.Database" );
+            var databaseEntityTypeId = await Sweeper.GetEntityTypeIdAsync( "Rock.Storage.Provider.Database" );
 
-            var files = Sweeper.SqlQuery<int, Guid, string>( $"SELECT [Id],[Guid],[FileName] FROM [BinaryFile] WHERE [StorageEntityTypeId] != {databaseEntityTypeId}" );
+            var files = await Sweeper.SqlQueryAsync<int, Guid, string>( $"SELECT [Id],[Guid],[FileName] FROM [BinaryFile] WHERE [StorageEntityTypeId] != {databaseEntityTypeId}" );
             double fileCount = files.Count;
 
             for ( int i = 0; i < files.Count; i++ )
@@ -34,25 +34,23 @@ namespace RockSweeper.SweeperActions.Storage
 
                 Progress( i / fileCount );
 
-                using ( var ms = Sweeper.GetFileDataFromRock( fileGuid ) )
+                using ( var ms = await Sweeper.GetFileDataFromRockAsync( fileGuid ) )
                 {
                     string path = Sweeper.IsFileNameImage( fileName ) ? $"~/GetImage.ashx?Guid={fileGuid}" : $"~/GetFile.ashx?Guid={fileGuid}";
 
-                    Sweeper.SqlCommand( $"UPDATE [BinaryFile] SET [StorageEntityTypeId] = @EntityTypeId, [StorageEntitySettings] = NULL, [Path] = @Path WHERE [Id] = {fileId}", new Dictionary<string, object>
+                    await Sweeper.SqlCommandAsync( $"UPDATE [BinaryFile] SET [StorageEntityTypeId] = @EntityTypeId, [StorageEntitySettings] = NULL, [Path] = @Path WHERE [Id] = {fileId}", new Dictionary<string, object>
                     {
                         { "EntityTypeId", databaseEntityTypeId },
                         { "Path", path }
                     } );
 
-                    Sweeper.SqlCommand( $"DELETE FROM [BinaryFileData] WHERE [Id] = {fileId}" );
-                    Sweeper.SqlCommand( $"INSERT INTO [BinaryFileData] ([Id], [Content], [Guid]) VALUES ({fileId}, @Content, NEWID())", new Dictionary<string, object>
+                    await Sweeper.SqlCommandAsync( $"DELETE FROM [BinaryFileData] WHERE [Id] = {fileId}" );
+                    await Sweeper.SqlCommandAsync( $"INSERT INTO [BinaryFileData] ([Id], [Content], [Guid]) VALUES ({fileId}, @Content, NEWID())", new Dictionary<string, object>
                     {
                         { "Content", ms }
                     } );
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

@@ -26,11 +26,11 @@ namespace RockSweeper.SweeperActions.Storage
     [ConflictsWithAction( typeof( ReplaceDatabaseDocumentsWithEmptyPlaceholders ) )]
     public class ConvertBinaryFilesToDatabasePlaceholders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var databaseEntityTypeId = Sweeper.GetEntityTypeId( "Rock.Storage.Provider.Database" );
+            var databaseEntityTypeId = await Sweeper.GetEntityTypeIdAsync( "Rock.Storage.Provider.Database" );
 
-            var files = Sweeper.SqlQuery( "SELECT [Id],[Guid],[FileName],[MimeType],[FileSize],[Width],[Height] FROM [BinaryFile]" )
+            var files = ( await Sweeper.SqlQueryAsync( "SELECT [Id],[Guid],[FileName],[MimeType],[FileSize],[Width],[Height] FROM [BinaryFile]" ) )
                 .ToObjects<BinaryFile>();
             double fileCount = files.Count;
             var fileNumber = 0;
@@ -93,22 +93,18 @@ namespace RockSweeper.SweeperActions.Storage
                         sets.Add( "[MimeType] = 'image/png'" );
                     }
 
-                    Sweeper.SqlCommand( $"UPDATE [BinaryFile] SET {string.Join( ", ", sets )} WHERE [Id] = {file.Id}", parameters );
+                    await Sweeper.SqlCommandAsync( $"UPDATE [BinaryFile] SET {string.Join( ", ", sets )} WHERE [Id] = {file.Id}", parameters );
 
                     // Update the image content.
-                    Sweeper.SqlCommand( $"DELETE FROM [BinaryFileData] WHERE [Id] = {file.Id}" );
-                    Sweeper.SqlCommand( $"INSERT INTO [BinaryFileData] ([Id], [Content], [Guid]) VALUES ({file.Id}, @Content, NEWID())", new Dictionary<string, object>
+                    await Sweeper.SqlCommandAsync( $"DELETE FROM [BinaryFileData] WHERE [Id] = {file.Id}" );
+                    await Sweeper.SqlCommandAsync( $"INSERT INTO [BinaryFileData] ([Id], [Content], [Guid]) VALUES ({file.Id}, @Content, NEWID())", new Dictionary<string, object>
                     {
                         { "Content", contentStream }
                     } );
 
                     fileNumber++;
                 }
-
-                imageStream?.Dispose();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

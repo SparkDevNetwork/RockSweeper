@@ -15,18 +15,16 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [Category( "System Settings" )]
     public class ResetFinancialGateways : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            int? entityTypeId = Sweeper.GetEntityTypeId( "Rock.Model.FinancialGateway" );
+            int? entityTypeId = await Sweeper.GetEntityTypeIdAsync( "Rock.Model.FinancialGateway" );
 
-            Sweeper.SqlCommand( $@"DELETE AV
+            await Sweeper.SqlCommandAsync( $@"DELETE AV
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 INNER JOIN [FinancialGateway] AS FG ON FG.[Id] = AV.[EntityId]
 INNER JOIN [EntityType] AS ET ON ET.[Id] = FG.[EntityTypeId]
 WHERE A.[EntityTypeId] = {entityTypeId.Value} AND ET.[Name] != 'Rock.Financial.TestGateway'" );
-
-            return Task.CompletedTask;
         }
     }
 }

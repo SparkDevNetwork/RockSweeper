@@ -16,9 +16,9 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class SanitizeDevices : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var devices = Sweeper.SqlQuery<int, string>( "SELECT [Id], [IPAddress] FROM [Device]" );
+            var devices = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [IPAddress] FROM [Device]" );
 
             foreach ( var device in devices )
             {
@@ -29,7 +29,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     continue;
                 }
 
-                if ( System.Net.IPAddress.TryParse( device.Item2, out System.Net.IPAddress ipAddress ) )
+                if ( System.Net.IPAddress.TryParse( device.Item2, out var _ ) )
                 {
                     ushort subAddress = ( ushort ) device.Item1;
                     var bytes = BitConverter.GetBytes( subAddress );
@@ -41,10 +41,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     changes.Add( "IPAddress", $"device-{device.Item1}.rocksolidchurchdemo.com" );
                 }
 
-                Sweeper.UpdateDatabaseRecord( "Device", device.Item1, changes );
+                await Sweeper.UpdateDatabaseRecordAsync( "Device", device.Item1, changes );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

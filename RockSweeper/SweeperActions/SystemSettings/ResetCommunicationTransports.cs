@@ -16,11 +16,9 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetCommunicationTransports : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Communication.TransportComponent" );
-
-            return Task.CompletedTask;
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Communication.TransportComponent" );
         }
     }
 }

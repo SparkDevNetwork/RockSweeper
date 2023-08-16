@@ -14,13 +14,11 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class SanitizeInteractionData : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SqlCommand( "UPDATE [InteractionChannel] SET [ChannelData] = NULL" );
-            Sweeper.SqlCommand( "UPDATE [InteractionComponent] SET [ComponentData] = NULL" );
-            Sweeper.SqlCommand( "UPDATE [Interaction] SET [InteractionData] = NULL" );
-
-            return Task.CompletedTask;
+            await Sweeper.SqlCommandAsync( "UPDATE [InteractionChannel] SET [ChannelData] = NULL" );
+            await Sweeper.SqlCommandAsync( "UPDATE [InteractionComponent] SET [ComponentData] = NULL" );
+            await Sweeper.SqlCommandAsync( "UPDATE [Interaction] SET [InteractionData] = NULL" );
         }
     }
 }

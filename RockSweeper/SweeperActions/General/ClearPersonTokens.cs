@@ -14,11 +14,9 @@ namespace RockSweeper.SweeperActions.General
     [Category( "General" )]
     public class ClearPersonTokens : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.SqlCommand( "TRUNCATE TABLE [PersonToken]" );
-
-            return Task.CompletedTask;
+            await Sweeper.SqlCommandAsync( "TRUNCATE TABLE [PersonToken]" );
         }
     }
 }

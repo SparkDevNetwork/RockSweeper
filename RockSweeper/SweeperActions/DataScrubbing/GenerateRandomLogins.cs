@@ -17,20 +17,20 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Category( "Data Scrubbing" )]
     public class GenerateRandomLogins : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            var logins = Sweeper.SqlQuery<int, string>( "SELECT [Id], [UserName] FROM [UserLogin]" );
+            var logins = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [UserName] FROM [UserLogin]" );
 
-            Sweeper.ProcessItemsInParallel( logins, 1000, ( items ) =>
+            await Sweeper.ProcessItemsInParallelAsync( logins, 1000, async ( items ) =>
             {
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
                 foreach ( var login in items )
                 {
                     var changes = new Dictionary<string, object>
-                        {
+                    {
                         { "UserName", $"fakeuser{ login.Item1 }" }
-                        };
+                    };
 
                     if ( login.Item2 != changes.First().Value.ToString() )
                     {
@@ -40,14 +40,12 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( bulkChanges.Count() > 0 )
                 {
-                    Sweeper.UpdateDatabaseRecords( "UserLogin", bulkChanges );
+                    await Sweeper.UpdateDatabaseRecordsAsync( "UserLogin", bulkChanges );
                 }
             }, ( p ) =>
             {
                 Progress( p );
             } );
-
-            return Task.CompletedTask;
         }
     }
 }

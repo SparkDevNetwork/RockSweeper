@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 
 using RockSweeper.Utility;
 
@@ -126,7 +125,7 @@ namespace RockSweeper.Dialogs
                     progressLine.Progress = e.Progress.Value * 100;
 
                     var index = _viewModel.ProgressLines.IndexOf( progressLine );
-                    _viewModel.Progress = index / ( double ) _viewModel.ProgressLines.Count;
+                    _viewModel.Progress = ( index + e.Progress ?? 0 ) / _viewModel.ProgressLines.Count;
                 }
             } );
         }

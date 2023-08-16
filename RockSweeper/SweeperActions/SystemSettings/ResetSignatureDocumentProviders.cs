@@ -16,12 +16,10 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetSignatureDocumentProviders : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Security.DigitalSignatureComponent" );
-            Sweeper.SetGlobalAttributeValue( "SignNowAccessToken", string.Empty );
-
-            return Task.CompletedTask;
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Security.DigitalSignatureComponent" );
+            await Sweeper.SetGlobalAttributeValue( "SignNowAccessToken", string.Empty );
         }
     }
 }

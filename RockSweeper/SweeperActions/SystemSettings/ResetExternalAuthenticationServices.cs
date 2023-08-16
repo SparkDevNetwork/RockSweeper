@@ -16,14 +16,12 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [RequiresRockWeb]
     public class ResetExternalAuthenticationServices : SweeperAction
     {
-        public override Task ExecuteAsync()
+        public override async Task ExecuteAsync()
         {
-            Sweeper.DeleteAttributeValuesForComponentsOfType( "Rock.Security.AuthenticationComponent", new[] {
+            await Sweeper.DeleteAttributeValuesForComponentsOfTypeAsync( "Rock.Security.AuthenticationComponent", new[] {
                 "Rock.Security.Authentication.Database",
                 "Rock.Security.Authentication.ActiveDirectory",
                 "Rock.Security.Authentication.PINAuthentication" } );
-
-            return Task.CompletedTask;
         }
     }
 }
