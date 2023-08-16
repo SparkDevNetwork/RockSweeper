@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.SqlClient;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Windows;
 
 using RockSweeper.Attributes;
 using RockSweeper.Dialogs;
+using RockSweeper.SweeperActions;
 using RockSweeper.Utility;
 
 namespace RockSweeper
@@ -101,7 +103,7 @@ namespace RockSweeper
         /// <value>
         /// The configuration options.
         /// </value>
-        public ObservableCollection<SweeperOption> ConfigOptions { get; } = new ObservableCollection<SweeperOption>();
+        public ObservableCollection<SweeperOption> ConfigOptions { get; }
 
         #endregion
 
@@ -114,35 +116,34 @@ namespace RockSweeper
         {
             InitializeComponent();
 
-            // Initialize all the possible actions.
-            var actions = typeof( SweeperController )
-                .GetMethods()
-                .Where( m => m.GetCustomAttribute<ActionIdAttribute>() != null )
-                .Select( m => new SweeperAction( m ) )
+            // Initialize all the possible operations.
+            var operations = GetType()
+                .Assembly
+                .GetTypes()
+                .Where( t => typeof( SweeperAction ).IsAssignableFrom( t ) && !t.IsAbstract )
+                .Select( t => new SweeperOption( t ) )
+                .OrderBy( t => t.Category )
+                .ThenBy( t => t.Title )
                 .ToList();
 
             // Make sure all conflicts go both ways.
-            foreach ( var action in actions )
+            foreach ( var operation in operations )
             {
-                var conflictingWithMe = actions
-                    .Where( a => a.ConflictingActions.Contains( action.Id ) )
+                var conflictingWithMe = operations
+                    .Where( a => a.ConflictingActions.Contains( operation.Id ) )
                     .Select( a => a.Id )
                     .ToList();
 
                 if ( conflictingWithMe.Any() )
                 {
-                    action.AddConflicts( conflictingWithMe );
+                    operation.AddConflicts( conflictingWithMe );
                 }
+
+                operation.PropertyChanged += Option_PropertyChanged;
             }
 
             // Initialize all UI options.
-            actions.ForEach( a => ConfigOptions.Add( new SweeperOption( a ) ) );
-
-            // Listen for any changes to update states.
-            foreach ( var option in ConfigOptions )
-            {
-                option.PropertyChanged += Option_PropertyChanged;
-            }
+            ConfigOptions = new ObservableCollection<SweeperOption>( operations );
 
             UpdateConflictingStates();
             UpdateOptionStates();

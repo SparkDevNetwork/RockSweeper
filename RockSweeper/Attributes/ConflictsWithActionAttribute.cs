@@ -2,7 +2,7 @@
 
 namespace RockSweeper.Attributes
 {
-    [AttributeUsage( AttributeTargets.Method, AllowMultiple = true )]
+    [AttributeUsage( AttributeTargets.Class, AllowMultiple = true )]
     public class ConflictsWithActionAttribute : Attribute
     {
         /// <summary>
@@ -11,15 +11,15 @@ namespace RockSweeper.Attributes
         /// <value>
         /// The action to be run after.
         /// </value>
-        public string MethodName { get; }
+        public Type Type { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AfterActionAttribute"/> class.
+        /// Initializes a new instance of the <see cref="ConflictsWithActionAttribute"/> class.
         /// </summary>
-        /// <param name="actionMethodName">The name of the action method.</param>
-        public ConflictsWithActionAttribute( string methodName )
+        /// <param name="type">The action class.</param>
+        public ConflictsWithActionAttribute( Type type )
         {
-            MethodName = methodName;
+            Type = type;
         }
     }
 }

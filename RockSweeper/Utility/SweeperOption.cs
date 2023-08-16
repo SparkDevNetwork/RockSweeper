@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
+
+using RockSweeper.Attributes;
 
 namespace RockSweeper.Utility
 {
@@ -11,15 +14,6 @@ namespace RockSweeper.Utility
     /// <seealso cref="System.ComponentModel.INotifyPropertyChanged" />
     public class SweeperOption : INotifyPropertyChanged
     {
-        #region Fields
-
-        /// <summary>
-        /// The backing field for the action.
-        /// </summary>
-        private readonly SweeperAction _action;
-
-        #endregion
-
         #region Events
 
         /// <inheritdoc/>
@@ -35,7 +29,7 @@ namespace RockSweeper.Utility
         /// <value>
         /// The unique identifier of this option instance.
         /// </value>
-        public Guid Id => _action.Id;
+        public Guid Id { get; }
 
         /// <summary>
         /// Gets the title.
@@ -43,7 +37,7 @@ namespace RockSweeper.Utility
         /// <value>
         /// The title.
         /// </value>
-        public string Title => _action.Title;
+        public string Title { get; }
 
         /// <summary>
         /// Gets the category.
@@ -51,7 +45,7 @@ namespace RockSweeper.Utility
         /// <value>
         /// The category.
         /// </value>
-        public string Category => _action.Category;
+        public string Category { get; }
 
         /// <summary>
         /// Gets the tooltip description.
@@ -59,15 +53,47 @@ namespace RockSweeper.Utility
         /// <value>
         /// The tooltip description.
         /// </value>
-        public string Description => _action.Description;
+        public string Description { get; }
 
         /// <summary>
-        /// Gets the name of the method to be called.
+        /// Gets the type of the action class.
         /// </summary>
         /// <value>
-        /// The name of the method to be called.
+        /// The type of the action class.
         /// </value>
-        public MethodInfo Method => _action.Method;
+        public Type ActionType { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the RockWeb folder is required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresRockWeb { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether location services are required.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if location services are required; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequiresLocationServices { get; }
+
+        /// <summary>
+        /// Gets the actions that this option must run after.
+        /// </summary>
+        /// <value>
+        /// The actions that this option must run after.
+        /// </value>
+        public ICollection<Guid> RunAfterActions { get; }
+
+        /// <summary>
+        /// Gets the actions that this action conflicts with.
+        /// </summary>
+        /// <value>
+        /// The actions that this action conflicts with.
+        /// </value>
+        public ICollection<Guid> ConflictingActions { get; }
 
         /// <summary>
         /// Gets the full display name.
@@ -76,38 +102,6 @@ namespace RockSweeper.Utility
         /// The full display name.
         /// </value>
         public string FullName => $"{Category} >> {Title}";
-
-        /// <summary>
-        /// Gets a value indicating whether the RockWeb folder is required.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
-        /// </value>
-        public bool RequiresRockWeb => _action.RequiresRockWeb;
-
-        /// <summary>
-        /// Gets a value indicating whether location services are required.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if location services are required; otherwise, <c>false</c>.
-        /// </value>
-        public bool RequiresLocationServices => _action.RequiresLocationServices;
-
-        /// <summary>
-        /// Gets the actions that this option must run after.
-        /// </summary>
-        /// <value>
-        /// The actions that this option must run after.
-        /// </value>
-        public ICollection<Guid> RunAfterActions => _action.RunAfterActions;
-
-        /// <summary>
-        /// Gets the actions that this option conflicts with.
-        /// </summary>
-        /// <value>
-        /// The actions that this option conflicts with.
-        /// </value>
-        public ICollection<Guid> ConflictingActions => _action.ConflictingActions;
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is enabled.
@@ -159,16 +153,47 @@ namespace RockSweeper.Utility
         /// <summary>
         /// Initializes a new instance of the <see cref="SweeperOption"/> class.
         /// </summary>
-        /// <param name="action">The action.</param>
-        public SweeperOption( SweeperAction action )
+        /// <param name="actionType">The class type that will handle the processing.</param>
+        public SweeperOption( Type actionType )
         {
-            _action = action;
-            Selected = _action.SelectedByDefault;
+            ActionType = actionType;
+            Id = actionType.GetCustomAttribute<ActionIdAttribute>().Id;
+            Title = actionType.GetCustomAttribute<TitleAttribute>().Title;
+            Description = actionType.GetCustomAttribute<DescriptionAttribute>().Description;
+            Category = actionType.GetCustomAttribute<CategoryAttribute>().Category;
+            RequiresRockWeb = actionType.GetCustomAttribute<RequiresRockWebAttribute>() != null;
+            RequiresLocationServices = actionType.GetCustomAttribute<RequiresLocationServiceAttribute>() != null;
+
+            var defaultValue = actionType.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+
+            if ( defaultValue != null && defaultValue is bool boolDefaultValue )
+            {
+                Selected = boolDefaultValue;
+            }
+
+            RunAfterActions = actionType.GetCustomAttributes<AfterActionAttribute>()
+                .Select( a => a.Type )
+                .Select( t => t.GetCustomAttribute<ActionIdAttribute>().Id )
+                .ToList();
+
+            ConflictingActions = actionType.GetCustomAttributes<ConflictsWithActionAttribute>()
+                .Select( a => a.Type )
+                .Select( t => t.GetCustomAttribute<ActionIdAttribute>().Id )
+                .ToList();
         }
 
         #endregion
 
         #region Methods
+
+        /// <summary>
+        /// Adds additional conflicts to this action.
+        /// </summary>
+        /// <param name="conflictingIds">The identifiers that conflict with this action.</param>
+        public void AddConflicts( IEnumerable<Guid> conflictingIds )
+        {
+            ( ( List<Guid> ) ConflictingActions ).AddRange( conflictingIds );
+        }
 
         /// <summary>
         /// Notifies the property changed.
