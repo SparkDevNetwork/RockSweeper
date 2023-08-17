@@ -400,30 +400,25 @@ namespace RockSweeper
             int totalItems = items.Count;
             int processedItems = 0;
             var lockObject = new object();
+            var queue = new ConcurrentQueue<List<T>>();
+
+            // Convert the full set to chunks and then enqueue them all.
+            items.Chunk( chunkSize )
+                .ToList()
+                .ForEach( c => queue.Enqueue( c.ToList() ) );
 
             async Task ProcessChunk()
             {
-                List<T> chunkItems;
-
-                lock ( lockObject )
+                while ( queue.TryDequeue( out var chunk ) )
                 {
-                    chunkItems = items.Take( chunkSize ).ToList();
-                    items = items.Skip( chunkSize ).ToList();
-                }
-
-                while ( chunkItems.Any() )
-                {
-                    await processor( chunkItems );
+                    await processor( chunk );
 
                     CancellationToken.ThrowIfCancellationRequested();
 
                     lock ( lockObject )
                     {
-                        processedItems += chunkItems.Count;
-                        progress( ( processedItems + 1 ) / ( double ) totalItems );
-
-                        chunkItems = items.Take( chunkSize ).ToList();
-                        items = items.Skip( chunkSize ).ToList();
+                        processedItems += chunk.Count;
+                        progress( processedItems / ( double ) totalItems );
                     }
                 }
             }
@@ -431,7 +426,7 @@ namespace RockSweeper
             //
             // Create all the tasks we need.
             //
-            var tasks = new List<System.Threading.Tasks.Task>();
+            var tasks = new List<Task>();
             for ( int i = 0; i < Environment.ProcessorCount * 2; i++ )
             {
                 tasks.Add( Task.Run( ProcessChunk, CancellationToken ) );
