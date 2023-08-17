@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+
 using RockSweeper.Attributes;
 using RockSweeper.Utility;
 
@@ -155,6 +157,56 @@ namespace RockSweeper
                 || file.FileName.EndsWith( ".jpeg", StringComparison.CurrentCultureIgnoreCase )
                 || file.FileName.EndsWith( ".png", StringComparison.CurrentCultureIgnoreCase )
                 || file.MimeType.StartsWith( "image/", StringComparison.CurrentCultureIgnoreCase );
+        }
+
+        /// <summary>
+        /// Chunks a set of items out into multiple sets of a given size.
+        /// </summary>
+        /// <typeparam name="T">The type of the item.</typeparam>
+        /// <param name="items">The set of items to be chunked.</param>
+        /// <param name="size">The maximum number of items in each chunk.</param>
+        /// <returns>An enumerable set of enumerable chunks.</returns>
+        public static IEnumerable<IEnumerable<T>> Chunk<T>( this IEnumerable<T> items, int size )
+        {
+            var chunk = new List<T>( size );
+
+            foreach ( var item in items )
+            {
+                chunk.Add( item );
+
+                if ( chunk.Count < size )
+                {
+                    continue;
+                }
+
+                yield return chunk;
+
+                chunk = new List<T>( size );
+            }
+
+            if ( chunk.Count > 0 )
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the left side of a string by trimming any characters
+        /// past the specified length.
+        /// </summary>
+        /// <param name="s">The string to be trimmed.</param>
+        /// <param name="len">The maximum length of the returned string.</param>
+        /// <returns>The string.</returns>
+        public static string Left( this string s, int len )
+        {
+            if ( s.Length <= len )
+            {
+                return s;
+            }
+            else
+            {
+                return s.Substring( 0, len );
+            }
         }
     }
 }

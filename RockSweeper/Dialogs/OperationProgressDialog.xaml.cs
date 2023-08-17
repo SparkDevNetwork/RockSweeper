@@ -138,6 +138,7 @@ namespace RockSweeper.Dialogs
 
                 progressLine.Progress = null;
                 progressLine.State = ProgressLineState.Completed;
+                progressLine.Message = string.Empty;
 
                 var index = _viewModel.ProgressLines.IndexOf( progressLine );
 

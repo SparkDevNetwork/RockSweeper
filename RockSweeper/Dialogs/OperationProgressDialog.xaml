@@ -34,6 +34,7 @@
         <Button Grid.Row="0"
                 Grid.Column="1"
                 ToolTip="Cancel database cleaning."
+                Click="Stop_Click"
                 Visibility="{Binding CanCancel, Converter={StaticResource BoolToVis}}"
                 Background="Transparent"
                 BorderBrush="Transparent">

@@ -146,8 +146,8 @@
     <Compile Include="SweeperActions\DataScrubbing\SanitizeBenevolenceRequestData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeContentChannelItems.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeDevices.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\SanitizeFinancialRecords.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeInteractionData.cs" />
-    <Compile Include="SweeperActions\DataScrubbing\ScrubSavedAccountTables.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ScrubWorkflowLog.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ShuffleLocationAddresses.cs" />
     <Compile Include="SweeperActions\General\ClearExceptionLog.cs" />

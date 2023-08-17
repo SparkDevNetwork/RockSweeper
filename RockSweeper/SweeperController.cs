@@ -366,6 +366,11 @@ namespace RockSweeper
         {
             ProgressEventArgs args;
 
+            var progressStepCount = Math.Max( 1, stepCount ?? 1 );
+            var progressStep = Math.Max( 1, step ?? 1 );
+
+            percentage = ( ( progressStep - 1 ) / ( double ) progressStepCount ) + ( percentage / progressStepCount );
+
             if ( step.HasValue && stepCount.HasValue )
             {
                 args = new ProgressEventArgs( actionId, percentage, $"Step {step} of {stepCount}" );
@@ -1065,11 +1070,27 @@ namespace RockSweeper
         /// </summary>
         /// <param name="tableName">Name of the table to update.</param>
         /// <param name="records">The records to be updated.</param>
+        /// <param name="progressCallback">The function to call to report progress, may be <c>null</c>.</param>
         /// <exception cref="Exception">Unknown column type '' in bulk update.</exception>
-        public async Task UpdateDatabaseRecordsAsync( string tableName, List<Tuple<int, Dictionary<string, object>>> records )
+        public async Task UpdateDatabaseRecordsAsync( string tableName, List<Tuple<int, Dictionary<string, object>>> records, Action<double> progressCallback = null )
         {
             if ( !records.Any() )
             {
+                return;
+            }
+
+            // If we got more than 2,500 records to update then do it in chunks.
+            if ( records.Count > 2_500 )
+            {
+                var chunks = records.Chunk( 2_500 ).ToList();
+
+                for (int i = 0; i < chunks.Count; i++)
+                {
+                    await UpdateDatabaseRecordsAsync( tableName, chunks[i].ToList(), null );
+
+                    progressCallback?.Invoke( ( i + 1 ) / ( double ) chunks.Count );
+                }
+
                 return;
             }
 
@@ -1314,9 +1335,9 @@ WHERE AV.EntityId = 0
         {
             return SqlCommandAsync( $@"DECLARE @AttributeId int = (SELECT A.[Id] FROM [Attribute] AS A INNER JOIN [EntityType] AS ET ON ET.[Id] = A.[EntityTypeId] WHERE ET.[Name] = '{entityType}' AND A.[Key] = '{attributeKey}')
 IF EXISTS (SELECT * FROM [AttributeValue] WHERE [AttributeId] = @AttributeId)
-	UPDATE [AttributeValue] SET [Value] = '{value}' WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
+    UPDATE [AttributeValue] SET [Value] = '{value}' WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
 ELSE
-	INSERT INTO [AttributeValue] ([IsSystem], [AttributeId], [EntityId], [Value], [Guid]) VALUES (0, @AttributeId, 0, '{value}', NEWID())" );
+    INSERT INTO [AttributeValue] ([IsSystem], [AttributeId], [EntityId], [Value], [Guid]) VALUES (0, @AttributeId, 0, '{value}', NEWID())" );
         }
 
         /// <summary>

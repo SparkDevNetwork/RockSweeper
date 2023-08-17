@@ -41,12 +41,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     var caption = ( string ) history["Caption"];
                     if ( !string.IsNullOrWhiteSpace( caption ) )
                     {
-                        var value = string.Join( " ", Sweeper.DataFaker.Lorem.Words( caption.Split( ' ' ).Length ) );
-
-                        if ( value.Length > 200 )
-                        {
-                            value = value.Substring( 0, 200 );
-                        }
+                        var value = Sweeper.DataFaker.Lorem.Sentence( caption.Split( ' ' ).Length ).Left( 200 );
 
                         changes.Add( "Caption", value );
                     }
