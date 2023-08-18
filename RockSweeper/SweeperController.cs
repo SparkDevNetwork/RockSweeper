@@ -219,6 +219,21 @@ namespace RockSweeper
         }
         private Dictionary<string, List<string>> _locationCityPostalCodes;
 
+        /// <summary>
+        /// The original first name values from the Person table.
+        /// </summary>
+        public IReadOnlyCollection<string> OriginalFirstNames { get; private set; }
+
+        /// <summary>
+        /// The original nick name values from the Person table.
+        /// </summary>
+        public IReadOnlyCollection<string> OriginalNickNames { get; private set; }
+
+        /// <summary>
+        /// The original last name values from the Person table.
+        /// </summary>
+        public IReadOnlyCollection<string> OriginalLastNames { get; private set; }
+
         #endregion
 
         #region Scrubbed Tables
@@ -317,6 +332,8 @@ namespace RockSweeper
         /// </summary>
         public async Task ExecuteAsync( IList<SweeperOption> options )
         {
+            await StashOriginalPersonNamesAsync();
+
             for ( int i = 0; i < options.Count; i++ )
             {
                 var option = options[i];
@@ -459,6 +476,18 @@ namespace RockSweeper
             return _executeActionTypes.Contains( typeof( T ) );
         }
 
+        /// <summary>
+        /// Gets the unique person names and store them in memory for use by
+        /// various actions.
+        /// </summary>
+        /// <returns>A task that represents this operation.</returns>
+        public async Task StashOriginalPersonNamesAsync()
+        {
+            OriginalFirstNames = new HashSet<string>( await SqlQueryAsync<string>( "SELECT DISTINCT [FirstName] FROM [Person]" ) );
+            OriginalNickNames = new HashSet<string>( await SqlQueryAsync<string>( "SELECT DISTINCT [NickName] FROM [Person]" ) );
+            OriginalLastNames = new HashSet<string>( await SqlQueryAsync<string>( "SELECT DISTINCT [LastName] FROM [Person]" ) );
+        }
+
         #endregion
 
         #region Fake Data Methods
@@ -484,7 +513,6 @@ namespace RockSweeper
                     }
                 }
             } );
-
 
             return email;
         }

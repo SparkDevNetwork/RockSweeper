@@ -148,6 +148,7 @@
     <Compile Include="SweeperActions\DataScrubbing\SanitizeContentChannelItems.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeDevices.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeFinancialRecords.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\SanitizeGroupNames.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeInteractionData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizePersonAlternateIdentifiers.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ScrubWorkflowLog.cs" />
