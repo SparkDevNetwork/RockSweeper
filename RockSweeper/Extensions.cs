@@ -208,5 +208,24 @@ namespace RockSweeper
                 return s.Substring( 0, len );
             }
         }
+
+        /// <summary>
+        /// Checks if the givne string is an e-mail address. This will only
+        /// return true if it is an exact e-mail address, not contained within
+        /// a larger body of text.
+        /// </summary>
+        /// <param name="s">The string to be checked.</param>
+        /// <returns><c>true</c> if the string represents exactly one e-mail address; otherwise <c>false</c>.</returns>
+        public static bool IsEmailAddress( this string s )
+        {
+            if ( s == null )
+            {
+                return false;
+            }
+
+            var match = SweeperController.EmailRegex.Match( s );
+
+            return match.Success && match.Value.Length == s.Length;
+        }
     }
 }

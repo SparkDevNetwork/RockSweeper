@@ -25,7 +25,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Stage 1: Replace all Person phone numbers.
             //
-            var phoneNumbers = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Number] FROM [PhoneNumber] WHERE [Number] != ''" );
+            var phoneNumbers = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Number] FROM [PhoneNumber] WHERE [Number] != '' ORDER BY [Id]" );
             await Sweeper.ProcessItemsInParallelAsync( phoneNumbers, 1000, async ( items ) =>
             {
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
@@ -77,7 +77,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 ( await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.MemoFieldType" ) ).Value
             };
 
-            var attributeValues = await Sweeper.SqlQueryAsync<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) )}) AND AV.[Value] != ''" );
+            var attributeValues = await Sweeper.SqlQueryAsync<int, string>( $"SELECT AV.[Id], AV.[Value] FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] IN ({string.Join( ",", fieldTypeIds.Select( i => i.ToString() ) )}) AND AV.[Value] != '' ORDER BY [AV].[Id]" );
             await Sweeper.ProcessItemsInParallelAsync( attributeValues, 1000, async ( items ) =>
             {
                 var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();

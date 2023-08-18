@@ -27,7 +27,7 @@ namespace RockSweeper
         /// <summary>
         /// The regular expression to use when scanning for e-mail addresses in text.
         /// </summary>
-        private readonly Regex _scrubEmailRegex = new Regex( @"^\w+@([a-zA-Z_]+?\.)+?[a-zA-Z]{2,}$" );
+        public static readonly Regex EmailRegex = new Regex( @"^\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", RegexOptions.IgnoreCase );
 
         /// <summary>
         /// The regular expression to use when scanning for phone numbers. This is
@@ -76,6 +76,11 @@ namespace RockSweeper
         /// The URL to use to get a file from the server.
         /// </summary>
         private string _getFileUrl;
+
+        /// <summary>
+        /// The list of action types that have been executed.
+        /// </summary>
+        private ConcurrentBag<Type> _executeActionTypes = new ConcurrentBag<Type>();
 
         #endregion
 
@@ -144,7 +149,6 @@ namespace RockSweeper
         /// The phone map.
         /// </value>
         private ConcurrentDictionary<string, string> PhoneMap { get; set; }
-
 
         /// <summary>
         /// Gets the faker object that will help generate fake data.
@@ -241,6 +245,7 @@ namespace RockSweeper
             { "Communication", new[] { "FromEmail", "ReplyToEmail", "CCEmails", "BCCEmails" } },
             { "CommunicationTemplate", new[] { "FromEmail", "ReplyToEmail", "CCEmails", "BCCEmails" } },
             { "EventItemOccurrence", new[] { "ContactEmail" } },
+            { "PersonSearchKey", new[] { "SearchValue" } },
             { "PrayerRequest", new[] { "Email" } },
             { "Registration", new[] { "ConfirmationEmail" } },
             { "RegistrationTemplate", new[] { "ConfirmationFromEmail", "ReminderFromEmail", "PaymentReminderFromEmail", "WaitListTransitionFromEmail" } },
@@ -328,6 +333,8 @@ namespace RockSweeper
                 CancellationToken.ThrowIfCancellationRequested();
 
                 OperationCompleted?.Invoke( this, new ProgressEventArgs( option.Id, null, null ) );
+
+                _executeActionTypes.Add( option.ActionType );
             }
         }
 
@@ -440,6 +447,16 @@ namespace RockSweeper
             // Wait for the tasks to complete. Also cancels tasks if we need to.
             //
             await Task.WhenAll( tasks );
+        }
+
+        /// <summary>
+        /// Determines if the given action has already been executed.
+        /// </summary>
+        /// <typeparam name="T">The action type.</typeparam>
+        /// <returns><c>true</c> if the action has been executed; otherwise <c>false</c>.</returns>
+        public bool HasActionExecuted<T>()
+        {
+            return _executeActionTypes.Contains( typeof( T ) );
         }
 
         #endregion
@@ -1598,7 +1615,7 @@ ELSE
         /// <returns></returns>
         public string ScrubContentForEmailAddresses( string value )
         {
-            return _scrubEmailRegex.Replace( value, ( match ) =>
+            return EmailRegex.Replace( value, ( match ) =>
             {
                 return GenerateFakeEmailAddressForAddress( match.Value );
             } );

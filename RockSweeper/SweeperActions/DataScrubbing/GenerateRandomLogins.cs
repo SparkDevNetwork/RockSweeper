@@ -19,7 +19,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     {
         public override async Task ExecuteAsync()
         {
-            var logins = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [UserName] FROM [UserLogin]" );
+            var logins = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [UserName] FROM [UserLogin] ORDER BY [Id]" );
 
             await Sweeper.ProcessItemsInParallelAsync( logins, 1000, async ( items ) =>
             {

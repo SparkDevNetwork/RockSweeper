@@ -24,7 +24,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
             var loginFieldValueRegex = new Regex( "(.*logged in.*<span class=['\"]field-name['\"]>)([^<]*)(<\\/span>)" );
 
-            var historyIds = await Sweeper.SqlQueryAsync<int>( $"SELECT [Id] FROM [History]" );
+            var historyIds = await Sweeper.SqlQueryAsync<int>( $"SELECT [Id] FROM [History] ORDER BY [Id]" );
 
             async Task ProcessChunk( List<int> items )
             {

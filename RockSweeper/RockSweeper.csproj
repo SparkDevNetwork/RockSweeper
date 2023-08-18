@@ -149,6 +149,7 @@
     <Compile Include="SweeperActions\DataScrubbing\SanitizeDevices.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeFinancialRecords.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeInteractionData.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\SanitizePersonAlternateIdentifiers.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ScrubWorkflowLog.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ShuffleLocationAddresses.cs" />
     <Compile Include="SweeperActions\General\ClearExceptionLog.cs" />
