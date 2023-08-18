@@ -74,7 +74,7 @@ namespace RockSweeper.Utility
                 return title;
             }
         }
-        private string _title;
+        private readonly string _title;
 
         /// <summary>
         /// Gets the icon.
@@ -169,6 +169,7 @@ namespace RockSweeper.Utility
             {
                 _message = value;
                 NotifyPropertyChanged( nameof( Message ) );
+                NotifyPropertyChanged( nameof( Title ) );
             }
         }
         private string _message = string.Empty;

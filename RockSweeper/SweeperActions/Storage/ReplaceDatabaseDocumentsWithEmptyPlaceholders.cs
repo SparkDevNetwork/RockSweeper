@@ -18,6 +18,7 @@ namespace RockSweeper.SweeperActions.Storage
     [Description( "Replaces any database-stored non-PNG and non-JPG files with empty file content." )]
     [Category( "Storage" )]
     [AfterAction( typeof( MoveBinaryFilesIntoDatabase ) )]
+    [AfterAction( typeof( DataScrubbing.RemoveBackgroundCheckData ) )]
     public class ReplaceDatabaseDocumentsWithEmptyPlaceholders : SweeperAction
     {
         public override async Task ExecuteAsync()

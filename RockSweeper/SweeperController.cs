@@ -40,6 +40,8 @@ namespace RockSweeper
 
         #endregion
 
+        #region Fields
+
         /// <summary>
         /// Content placeholder for .doc files.
         /// </summary>
@@ -74,6 +76,8 @@ namespace RockSweeper
         /// The URL to use to get a file from the server.
         /// </summary>
         private string _getFileUrl;
+
+        #endregion
 
         #region Events
 
