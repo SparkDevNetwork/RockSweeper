@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
@@ -37,13 +38,31 @@ WHERE [Guid] IN (
     '8C0E5852-F08F-4327-9AA5-87800A6AB53E' -- Peer Network
 )" );
             var ids = await Sweeper.SqlQueryAsync<int>( $"SELECT [Id] FROM [Group] WHERE [GroupTypeId] NOT IN ({string.Join( ",", ignoreGroupTypeIds.Select( id => id.ToString() ) )}) ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p ) );
 
-            await Sweeper.ProcessItemsInParallelAsync( ids, 2_500, ProcessGroupsAsync, p => Progress( p ) );
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubGroupsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "Group", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
         }
 
-        private async Task ProcessGroupsAsync( List<int> groupIds )
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubGroupsAsync( List<int> groupIds )
         {
-            var groups = ( await Sweeper.SqlQueryAsync( "SELECT [Id], [Name] FROM [Group] ORDER BY [Id]" ) ).ToObjects<Group>();
+            var groups = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Name] FROM [Group] WHERE [Id] IN ({string.Join( ",", groupIds )}) ORDER BY [Id]" ) ).ToObjects<Group>();
             var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var group in groups )
@@ -80,7 +99,7 @@ WHERE [Guid] IN (
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "Group", bulkUpdates );
+            return bulkUpdates;
         }
 
         private class Group
