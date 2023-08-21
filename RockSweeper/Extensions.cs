@@ -227,5 +227,32 @@ namespace RockSweeper
 
             return match.Success && match.Value.Length == s.Length;
         }
+
+        /// <summary>
+        /// Creates a new pipe to process items in the consumable.
+        /// </summary>
+        /// <typeparam name="TIn">The type of object in the consumable.</typeparam>
+        /// <typeparam name="TOut">The type of object after processing.</typeparam>
+        /// <param name="consumable">The consumable that contains the items to be processed.</param>
+        /// <param name="converter">The function that will convert the items.</param>
+        /// <param name="maxConcurrency">The maximum number of items to convert in parallel.</param>
+        /// <returns>A new consumable that will contain the processed items.</returns>
+        public static IAsyncConsumable<TOut> Pipe<TIn, TOut>( this IAsyncConsumable<TIn> consumable, Func<TIn, Task<TOut>> converter, int? maxConcurrency = null )
+        {
+            return new AsyncPipe<TIn, TOut>( consumable, converter, maxConcurrency );
+        }
+
+        /// <summary>
+        /// Creates a new consumer that will process the items in parallel.
+        /// </summary>
+        /// <typeparam name="T">The type of item to be processed.</typeparam>
+        /// <param name="consumable">The consumable that contains the items to be processed.</param>
+        /// <param name="processor">The function that will process the items.</param>
+        /// <param name="maxConcurrency">The maximum number of items to process in parallel.</param>
+        /// <returns>A new consumer instance that can be run.</returns>
+        public static AsyncConsumer<T> Consume<T>( this IAsyncConsumable<T> consumable, Func<T, Task> processor, int? maxConcurrency = null )
+        {
+            return new AsyncConsumer<T>( consumable, processor, maxConcurrency );
+        }
     }
 }

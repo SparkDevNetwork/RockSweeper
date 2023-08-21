@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
@@ -21,16 +22,31 @@ namespace RockSweeper.SweeperActions.DataScrubbing
         /// <inheritdoc/>
         public override async Task ExecuteAsync()
         {
-            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [PersonSearchKey] ORDER BY [Id]" );
+            var searchKeys = ( await Sweeper.SqlQueryAsync( "SELECT [Id], [SearchValue] FROM [PersonSearchKey] ORDER BY [Id]" ) ).ToObjects<SearchKey>();
+            var reporter = new CountProgressReporter( searchKeys.Count, p => Progress( p ) );
 
-            await Sweeper.ProcessItemsInParallelAsync( ids, 2_500, ProcessSearchKeysAsync, p => Progress( p ) );
+            await new AsyncProducer<List<SearchKey>>( searchKeys.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var results = await ScrubSearchKeys( items );
+
+                    reporter.Add( items.Count - results.Count );
+                    
+                    return results;
+                } )
+                .Consume( async items =>
+                {
+                    await SaveUpdates( items );
+
+                    reporter.Add( items.Count );
+                } )
+                .RunAsync( Sweeper.CancellationToken );
         }
 
-        private async Task ProcessSearchKeysAsync( List<int> ids )
+        private Task<List<Tuple<int, Dictionary<string, object>>>> ScrubSearchKeys( IEnumerable<SearchKey> searchKeys )
         {
-            var searchKeys = ( await Sweeper.SqlQueryAsync( "SELECT [Id], [SearchValue] FROM [PersonSearchKey] ORDER BY [Id]" ) ).ToObjects<SearchKey>();
-            var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
             var emailHasBeenScrubbed = Sweeper.HasActionExecuted<GenerateRandomEmailAddresses>();
+            var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var searchKey in searchKeys )
             {
@@ -57,7 +73,12 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "PersonSearchKey", bulkUpdates );
+            return Task.FromResult( bulkUpdates );
+        }
+
+        private async Task SaveUpdates( List<Tuple<int, Dictionary<string, object>>> updates )
+        {
+            await Sweeper.UpdateDatabaseRecordsAsync( "PersonSearchKey", updates );
         }
 
         private class SearchKey

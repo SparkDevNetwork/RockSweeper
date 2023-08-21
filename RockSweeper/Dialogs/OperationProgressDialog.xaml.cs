@@ -100,7 +100,7 @@ namespace RockSweeper.Dialogs
 
         private void Sweeper_OperationStarted( object sender, ProgressEventArgs e )
         {
-            Dispatcher.Invoke( () =>
+            Dispatcher.InvokeAsync( () =>
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
@@ -114,7 +114,7 @@ namespace RockSweeper.Dialogs
 
         private void Sweeper_ProgressChanged( object sender, ProgressEventArgs e )
         {
-            Dispatcher.Invoke( () =>
+            Dispatcher.InvokeAsync( () =>
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
@@ -132,7 +132,7 @@ namespace RockSweeper.Dialogs
 
         private void Sweeper_OperationCompleted( object sender, ProgressEventArgs e )
         {
-            Dispatcher.Invoke( () =>
+            Dispatcher.InvokeAsync( () =>
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 

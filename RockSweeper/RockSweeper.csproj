@@ -187,6 +187,10 @@
     <Compile Include="SweeperActions\SystemSettings\SanitizeApplicationRoots.cs" />
     <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
+    <Compile Include="Utility\AsyncAutoResetEvent.cs" />
+    <Compile Include="Utility\AsyncConsumer.cs" />
+    <Compile Include="Utility\AsyncPipe.cs" />
+    <Compile Include="Utility\AsyncProducer.cs" />
     <Compile Include="Utility\BinaryFile.cs" />
     <Compile Include="Utility\BoolToValueConverterT.cs" />
     <Compile Include="Utility\Coordinates.cs" />
@@ -195,9 +199,12 @@
     </Compile>
     <Compile Include="Extensions.cs" />
     <Compile Include="External\HereRestApi.cs" />
+    <Compile Include="Utility\IAsyncConsumable.cs" />
+    <Compile Include="Utility\IAsyncRunnable.cs" />
     <Compile Include="Utility\ProgressEventArgs.cs" />
     <Compile Include="Utility\ProgressLine.cs" />
     <Compile Include="Utility\RockDomain.cs" />
+    <Compile Include="Utility\CountProgressReporter.cs" />
     <Compile Include="Utility\Support.cs" />
     <Compile Include="SweeperController.cs" />
     <Compile Include="Utility\SweeperConfiguration.cs" />
