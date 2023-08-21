@@ -87,6 +87,11 @@ namespace RockSweeper
         /// </summary>
         private ConcurrentBag<Type> _executeActionTypes = new ConcurrentBag<Type>();
 
+        /// <summary>
+        /// The number of SQL queries that have been executed.
+        /// </summary>
+        private int _sqlQueryCount = 0;
+
         #endregion
 
         #region Events
@@ -210,6 +215,11 @@ namespace RockSweeper
         /// The original last name values from the Person table.
         /// </summary>
         public IReadOnlyCollection<string> OriginalLastNames { get; private set; }
+
+        /// <summary>
+        /// The number of SQL queries that have been executed.
+        /// </summary>
+        public int SqlQueryCount => _sqlQueryCount;
 
         #endregion
 
@@ -911,6 +921,8 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
+                    Interlocked.Increment( ref _sqlQueryCount );
+
                     return ( T ) await command.ExecuteScalarAsync();
                 }
             }
@@ -932,6 +944,8 @@ namespace RockSweeper
                 {
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
@@ -965,6 +979,8 @@ namespace RockSweeper
                 {
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
@@ -1000,6 +1016,8 @@ namespace RockSweeper
                 {
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
@@ -1037,6 +1055,8 @@ namespace RockSweeper
                 {
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
@@ -1077,6 +1097,8 @@ namespace RockSweeper
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
 
+                    Interlocked.Increment( ref _sqlQueryCount );
+
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
                         while ( reader.Read() )
@@ -1111,6 +1133,8 @@ namespace RockSweeper
                 {
                     command.CommandText = sql;
                     command.CommandTimeout = 300;
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     using ( var reader = await command.ExecuteReaderAsync() )
                     {
@@ -1163,6 +1187,8 @@ namespace RockSweeper
                             command.Parameters.AddWithValue( p.Key, p.Value ?? DBNull.Value );
                         }
                     }
+
+                    Interlocked.Increment( ref _sqlQueryCount );
 
                     return await command.ExecuteNonQueryAsync();
                 }
@@ -1315,11 +1341,13 @@ namespace RockSweeper
                     // Create a temporary table to bulk insert our changes into.
                     //
                     command.CommandText = $"CREATE TABLE #BulkUpdate({string.Join( ",", columns )})";
+                    Interlocked.Increment( ref _sqlQueryCount );
                     await command.ExecuteNonQueryAsync();
 
                     //
                     // Use SqlBulkCopy to insert all the changes in bulk.
                     //
+                    Interlocked.Increment( ref _sqlQueryCount );
                     using ( SqlBulkCopy bulkCopy = new SqlBulkCopy( connection ) )
                     {
                         bulkCopy.BulkCopyTimeout = 600;
@@ -1332,6 +1360,7 @@ namespace RockSweeper
                     //
                     command.CommandTimeout = 300;
                     command.CommandText = $"UPDATE T SET {string.Join( ",", setColumns )} FROM [{tableName}] AS T INNER JOIN #BulkUpdate AS U ON U.[Id] = T.[Id]";
+                    Interlocked.Increment( ref _sqlQueryCount );
                     await command.ExecuteNonQueryAsync();
                 }
             }

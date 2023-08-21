@@ -89,13 +89,13 @@ namespace RockSweeper.Dialogs
                 return;
             }
 
-            sweeper.Dispose();
-
             Dispatcher.Invoke( () =>
             {
                 _viewModel.CanCancel = false;
-                MessageBox.Show( this, "Finished processing database.", "Completed" );
+                MessageBox.Show( this, $"Finished processing database.\nExecuted {sweeper.SqlQueryCount:N0} queries.", "Completed" );
             } );
+
+            sweeper.Dispose();
         }
 
         private void Sweeper_OperationStarted( object sender, ProgressEventArgs e )
