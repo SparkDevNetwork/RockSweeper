@@ -6,15 +6,15 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.SystemSettings
 {
     /// <summary>
-    /// Disables the signature document providers.
+    /// Disables the digital signature services.
     /// </summary>
-    [ActionId( "0d1246a9-8a19-4658-a1c5-c8804e8bfeab" )]
-    [Title( "Disable Signature Document Providers" )]
-    [Description( "Updates the Rock configuration to ensure that all signed document providers are disabled." )]
+    [ActionId( "218ec162-27a9-4182-986e-868c35c9d63d" )]
+    [Title( "Disable Digital Signature Services" )]
+    [Description( "Updates the Rock configuration to ensure that all digital signature services are disabled." )]
     [Category( "System Settings" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetSignatureDocumentProviders ) )]
-    public class DisableSignatureDocumentProviders : SweeperAction
+    [ConflictsWithAction( typeof( ResetDigitalSignatureServices ) )]
+    public class DisableDigitalSignatureServices : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

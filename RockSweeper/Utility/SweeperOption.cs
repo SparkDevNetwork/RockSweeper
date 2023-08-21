@@ -64,14 +64,6 @@ namespace RockSweeper.Utility
         public Type ActionType { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the RockWeb folder is required.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if the RockWeb folder is required; otherwise, <c>false</c>.
-        /// </value>
-        public bool RequiresRockWeb { get; }
-
-        /// <summary>
         /// Gets a value indicating whether location services are required.
         /// </summary>
         /// <value>
@@ -131,8 +123,11 @@ namespace RockSweeper.Utility
             get => _selected;
             set
             {
-                _selected = value;
-                NotifyPropertyChanged( "Selected" );
+                if ( _selected != value )
+                {
+                    _selected = value;
+                    NotifyPropertyChanged( "Selected" );
+                }
             }
         }
         private bool _selected;
@@ -161,7 +156,6 @@ namespace RockSweeper.Utility
             Title = actionType.GetCustomAttribute<TitleAttribute>().Title;
             Description = actionType.GetCustomAttribute<DescriptionAttribute>().Description;
             Category = actionType.GetCustomAttribute<CategoryAttribute>().Category;
-            RequiresRockWeb = actionType.GetCustomAttribute<RequiresRockWebAttribute>() != null;
             RequiresLocationServices = actionType.GetCustomAttribute<RequiresLocationServiceAttribute>() != null;
 
             var defaultValue = actionType.GetCustomAttribute<DefaultValueAttribute>()?.Value;

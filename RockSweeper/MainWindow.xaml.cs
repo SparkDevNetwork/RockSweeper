@@ -62,23 +62,6 @@ namespace RockSweeper
         private string _sqlDatabaseName;
 
         /// <summary>
-        /// Gets the rock web folder.
-        /// </summary>
-        /// <value>
-        /// The rock web folder.
-        /// </value>
-        public string RockWebFolder
-        {
-            get => _rockWebFolder;
-            private set
-            {
-                _rockWebFolder = value;
-                NotifyPropertyChanged( "RockWebFolder" );
-            }
-        }
-        private string _rockWebFolder;
-
-        /// <summary>
         /// Gets a value indicating whether this instance can start.
         /// </summary>
         /// <value>
@@ -172,11 +155,9 @@ namespace RockSweeper
             foreach ( var option in ConfigOptions )
             {
                 bool hasDatabase = !string.IsNullOrWhiteSpace( SqlDatabaseName );
-                bool hasRockWeb = !string.IsNullOrWhiteSpace( RockWebFolder );
                 bool hasLocationServices = !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppCode ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.HereAppId ) && !string.IsNullOrWhiteSpace( Properties.Settings.Default.TargetGeoCenter );
 
                 option.Enabled = !option.Conflicted && hasDatabase;
-                option.Enabled = option.Enabled && ( !option.RequiresRockWeb || hasRockWeb );
                 option.Enabled = option.Enabled && ( !option.RequiresLocationServices || hasLocationServices );
             }
         }
@@ -243,24 +224,6 @@ namespace RockSweeper
         }
 
         /// <summary>
-        /// Handles the Click event of the SelectRockFolder control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
-        protected void SelectRockFolder_Click( object sender, RoutedEventArgs e )
-        {
-            var browser = new WPFFolderBrowser.WPFFolderBrowserDialog( "RockWeb Folder" );
-            if ( !browser.ShowDialog().GetValueOrDefault() )
-            {
-                return;
-            }
-
-            RockWebFolder = browser.FileName;
-
-            UpdateOptionStates();
-        }
-
-        /// <summary>
         /// Handles the Click event of the Start control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -271,7 +234,6 @@ namespace RockSweeper
             {
                 Options = ConfigOptions.Where( o => o.Enabled && o.Selected ).ToList(),
                 ConnectionString = ConnectionString,
-                RockWebFolder = RockWebFolder
             } );
 
             operation.ShowDialog();

@@ -68,6 +68,11 @@ namespace RockSweeper
         private static readonly Lazy<byte[]> _placeholderPdf = new Lazy<byte[]>( () => Bogus.ResourceHelper.ReadResource( typeof( SweeperController ).Assembly, "RockSweeper.Resources.placeholder.pdf" ) );
 
         /// <summary>
+        /// Known component class names.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> _knownComponentTypes = new Dictionary<string, string[]>();
+
+        /// <summary>
         /// The primary state the organization belongs to.
         /// </summary>
         private string _primaryState;
@@ -105,34 +110,6 @@ namespace RockSweeper
         /// The database connection string.
         /// </value>
         protected string ConnectionString { get; private set; }
-
-        /// <summary>
-        /// Gets the rock web folder path.
-        /// </summary>
-        /// <value>
-        /// The rock web folder path.
-        /// </value>
-        protected string RockWeb { get; private set; }
-
-        /// <summary>
-        /// Gets the Rock domain.
-        /// </summary>
-        /// <value>
-        /// The Rock domain.
-        /// </value>
-        public RockDomain Domain
-        {
-            get
-            {
-                if ( _domain == null )
-                {
-                    _domain = new RockDomain( RockWeb );
-                }
-
-                return _domain;
-            }
-        }
-        private RockDomain _domain;
 
         /// <summary>
         /// Gets the map of original e-mail addresses to new scrubbed e-mail addresses.
@@ -281,17 +258,133 @@ namespace RockSweeper
 
         #endregion
 
-        #region Constructor
+        #region Constructors
+
+        /// <summary>
+        /// Initializes the <see cref="SweeperController"/> static data.
+        /// </summary>
+        static SweeperController()
+        {
+            _knownComponentTypes.Add( "Rock.AI.Provider.AIProviderComponent", new string[]
+            {
+                "Rock.AI.OpenAI.Provider.OpenAIProvider"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Address.VerificationComponent", new string[]
+            {
+                "Rock.Address.Bing",
+                "Rock.Address.SmartyStreets",
+                "com.bricksandmortarstudio.IdealPostcodes.Address.IdealPostcodes",
+                "sg.carmel.Address.OneMap.OneMap"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Communication.TransportComponent", new string[]
+            {
+                "Rock.Communication.Transport.Firebase",
+                "Rock.Communication.Transport.MailgunHttp",
+                "Rock.Communication.Transport.MandrillSmtp",
+                "Rock.Communication.Transport.OneSignal", // Plugin
+                "Rock.Communication.Transport.RockMobilePush",
+                "Rock.Communication.Transport.SendGridHttp",
+                "Rock.Communication.Transport.SmsTest",
+                "Rock.Communication.Transport.Twilio",
+                "com.bricksandmortarstudio.Communication.Transport.TwilioAlphanumeric",
+                "com.clearstream.Clearstream.Communication.Transport.Clearstream",
+                "com.intulse.PbxComponent.IntulseSmsTransport",
+                "com.mbt.mbtSMS.Communication.Transport.MBT",
+                "com.subsplash.Communcation.Transport.SubsplashTransport",
+                "fortresstechnology.za.co.Plugins.Communication.Transport.BulkSMS",
+                "fortresstechnology.za.co.Plugins.Communication.Transport.ConnectMobile"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Financial.GatewayComponent", new string[]
+            {
+                "Rock.Financial.TestGateway",
+                "Rock.Financial.TestRedirectionGateway",
+                "Rock.MyWell.MyWellGateway",
+                "Rock.NMI.Gateway",
+                "Rock.PayFlowPro.Gateway",
+                "com.GyveGateway.GyveGateway",
+                "com.PaymentData.Gateway.Gateway",
+                "com.SimpleDonation.Gateway.SimpleDonation",
+                "com.pushpay.RockRMS.Gateway",
+                "fortresstechnology.za.co.PayFast.Gateway",
+                "io.lanio.stripe.Gateway",
+                "io.scanpay.RockRMS.Gateway",
+                "org.mywell.MyWellGateway.MyWellGateway"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Pbx.PbxComponent", new string[]
+            {
+                "com.blueboxmoon.FreePBX.Provider.FreePBX",
+                "com.intulse.PbxComponent.IntulsePbxComponent",
+                "com.minecartstudio.PbxSwitchvox.Pbx.Provider.Switchvox"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Security.AuthenticationComponent", new string[]
+            {
+                "Rock.Security.Authentication.ActiveDirectory",
+                "Rock.Security.Authentication.Database",
+                "Rock.Security.Authentication.Facebook",
+                "Rock.Security.Authentication.Google",
+                "Rock.Security.Authentication.OidcClient",
+                "Rock.Security.Authentication.PasswordlessAuthentication",
+                "Rock.Security.Authentication.PINAuthentication",
+                "Rock.Security.Authentication.Twitter",
+                "com.bemaservices.Security.SSO.Authenticators.Okta",
+                "com.bemaservices.Security.SSO.Authenticators.Office365",
+                "com.bemaservices.Security.SSO.Authenticators.Vision2",
+                "tech.triumph.AzureAD.Security.Authentication.AzureAD"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Security.BackgroundCheckComponent", new string[]
+            {
+                "Rock.Security.BackgroundCheck.ProtectMyMinistry",
+                "Rock.Checkr.Checkr",
+                "CIAResearch.CIAResearch",
+                "com.activescreeningfaith.BackgroundCheck.ActiveScreeningFaith",
+                "com.bemaservices.MinistrySafe.MinistrySafe",
+                "com.protectmyministry.BackgroundCheck.ProtectMyMinistryV2",
+                "com.safehiringsolutions.BackgroundCheck.SafeMinistrySolutions",
+                "com.securesearchfaith.BackgroundCheck.SecureSearchFaith"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Security.DigitalSignatureComponent", new string[]
+            {
+                "Rock.SignNow.SignNow"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Storage.AssetStorage.AssetStorageComponent", new string[]
+            {
+                "Rock.Storage.AssetStorage.AmazonS3Component",
+                "Rock.Storage.AssetStorage.AzureCloudStorageComponent",
+                "Rock.Storage.AssetStorage.FileSystemComponent",
+                "Rock.Storage.AssetStorage.GoogleCloudStorageComponent",
+                "com.minecartstudio.CloudinaryStorageProvider.Storage.CloudinaryComponent",
+                "tech.triumph.CloudinaryStorageProvider.CloudinaryComponent"
+            } );
+
+            _knownComponentTypes.Add( "Rock.Storage.ProviderComponent", new string[]
+            {
+                "Rock.Storage.Provider.AzureBlobStorage",
+                "Rock.Storage.Provider.Database",
+                "Rock.Storage.Provider.FileSystem",
+                "Rock.Storage.Provider.GoogleCloudStorageProvider",
+                "com.blueboxmoon.B2CloudStorage.B2StorageProvider",
+                "com.minecartstudio.CloudinaryStorageProvider.CloudinaryBlobStorage",
+                "rocks.pillars.AmazonStorageProvider.S3BlobStorage",
+                "rocks.pillars.AzureStorageProvider.AzureBlobStorage",
+                "tech.triumph.CloudinaryStorageProvider.CloundinaryBlobStorage",
+            } );
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SweeperController"/> class.
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
-        /// <param name="rockWeb">The rock web.</param>
-        public SweeperController( string connectionString, string rockWeb )
+        public SweeperController( string connectionString )
         {
             ConnectionString = connectionString;
-            RockWeb = rockWeb;
 
             EmailMap = new ConcurrentDictionary<string, string>();
             PhoneMap = new ConcurrentDictionary<string, string>();
@@ -1303,11 +1396,17 @@ WHERE AV.EntityId = 0
         /// <param name="excludedTypes">The types to be excluded.</param>
         public async Task DisableComponentsOfTypeAsync( string componentType, string[] excludedTypes = null )
         {
-            var types = Domain.FindTypes( componentType ).Where( t => excludedTypes == null || !excludedTypes.Contains( t ) );
+            if ( !_knownComponentTypes.TryGetValue( componentType, out var types ) )
+            {
+                throw new Exception( $"Unknown component type '{componentType}'." );
+            }
 
             foreach ( var type in types )
             {
-                await DisableComponentTypeAsync( type );
+                if ( excludedTypes == null || !excludedTypes.Contains( type ) )
+                {
+                    await DisableComponentTypeAsync( type );
+                }
             }
         }
 
@@ -1318,11 +1417,17 @@ WHERE AV.EntityId = 0
         /// <param name="excludedTypes">The types to be excluded.</param>
         public async Task DeleteAttributeValuesForComponentsOfTypeAsync( string componentType, string[] excludedTypes = null )
         {
-            var types = Domain.FindTypes( componentType ).Where( t => excludedTypes == null || !excludedTypes.Contains( t ) );
+            if ( !_knownComponentTypes.TryGetValue( componentType, out var types ) )
+            {
+                throw new Exception( $"Unknown component type '{componentType}'." );
+            }
 
             foreach ( var type in types )
             {
-                await DeleteAttributeValuesForComponentTypeAsync( type );
+                if ( excludedTypes == null || !excludedTypes.Contains( type ) )
+                {
+                    await DeleteAttributeValuesForComponentTypeAsync( type );
+                }
             }
         }
 

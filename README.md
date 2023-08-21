@@ -35,13 +35,11 @@ it to a computer where you use Visual Studio and the
 [Rockit](https://www.rockrms.com/Rock/Developer/Rockit) SDK.
 
 1. Backup your production `Rock` database.
-2. Backup your production `RockWeb` folder.
-3. Ensure your Rockit SDK is running the same release version as the production server.
-4. Quit Visual Studio (this ensures the IIS Express is fully stopped).
-5. Restore your `Rock` database to your development box.
-6. Restore your `RockWeb` folder to your development box _in a different location than the Rockit SDK_.
-7. Run RockSweeper on the development box's database.
-8. Fire up Visual Studio and run the Rockit project.
+2. Ensure your Rockit SDK is running the same release version as the production server.
+3. Quit Visual Studio (this ensures the IIS Express is fully stopped).
+4. Restore your `Rock` database to your development box.
+5. Run RockSweeper on the development box's database.
+6. Fire up Visual Studio and run the Rockit project.
 
 You can technically run a newer version of the Rockit SDK than your
 production server, you just have to force it to run all the Rock migrations
@@ -54,4 +52,4 @@ Many of them require you to select your RockWeb folder as well. This
 doesn't make any changes to the files on disk, but it is needed to
 properly scan the various plugins that might exist.
 
-For a full list of actions and what each one does, head over to the [wiki](https://github.com/cabal95/RockSweeper/wiki/Actions).
+For a full list of actions and what each one does, head over to the [wiki](https://github.com/SparkDevNetwork/RockSweeper/wiki/Actions).

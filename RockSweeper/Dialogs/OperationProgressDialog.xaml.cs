@@ -33,7 +33,7 @@ namespace RockSweeper.Dialogs
 
         private async Task ExecuteOnTask()
         {
-            var sweeper = new SweeperController( _configuration.ConnectionString, _configuration.RockWebFolder );
+            var sweeper = new SweeperController( _configuration.ConnectionString );
 
             sweeper.ProgressChanged += Sweeper_ProgressChanged;
             sweeper.OperationStarted += Sweeper_OperationStarted;

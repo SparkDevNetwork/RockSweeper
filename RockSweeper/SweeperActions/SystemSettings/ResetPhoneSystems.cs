@@ -8,12 +8,11 @@ namespace RockSweeper.SweeperActions.SystemSettings
     /// <summary>
     /// Resets the phone systems.
     /// </summary>
-    /// <param name="actionData">The action data.</param>
     [ActionId( "afee211e-2a2d-4d85-a428-81ac95637ed6" )]
     [Title( "Reset Phone Systems" )]
     [Description( "Resets all phone system settings to system default values." )]
     [Category( "System Settings" )]
-    [RequiresRockWeb]
+    [ConflictsWithAction( typeof( DisablePhoneSystems ) )]
     public class ResetPhoneSystems : SweeperAction
     {
         public override async Task ExecuteAsync()

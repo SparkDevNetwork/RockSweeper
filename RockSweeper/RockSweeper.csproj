@@ -130,7 +130,6 @@
     <Compile Include="Attributes\ActionIdAttribute.cs" />
     <Compile Include="Attributes\ConflictsWithActionAttribute.cs" />
     <Compile Include="Attributes\RequiresLocationServiceAttribute.cs" />
-    <Compile Include="Attributes\RequiresRockWebAttribute.cs" />
     <Compile Include="Dialogs\OperationProgressDialog.xaml.cs">
       <DependentUpon>OperationProgressDialog.xaml</DependentUpon>
     </Compile>
@@ -165,18 +164,24 @@
     <Compile Include="SweeperActions\Storage\ReplaceDatabaseImagesWithEmptyPlaceholders.cs" />
     <Compile Include="SweeperActions\Storage\ReplaceDatabaseImagesWithSizedPlaceholders.cs" />
     <Compile Include="SweeperActions\SystemSettings\ConfigureForLocalhostSmtp.cs" />
+    <Compile Include="SweeperActions\SystemSettings\DisableAIServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableAuthenticationServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableBackgroundCheckProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableCommunicationTransports.cs" />
+    <Compile Include="SweeperActions\SystemSettings\DisableDigitalSignatureServices.cs" />
+    <Compile Include="SweeperActions\SystemSettings\DisableExternalAssetStorageProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableExternalAuthenticationServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableExternalStorageProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableFinancialGateways.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableLocationServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisablePhoneSystems.cs" />
     <Compile Include="SweeperActions\SystemSettings\DisableSignatureDocumentProviders.cs" />
+    <Compile Include="SweeperActions\SystemSettings\ResetAIServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetAuthenticationServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetBackgroundCheckProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetCommunicationTransports.cs" />
+    <Compile Include="SweeperActions\SystemSettings\ResetDigitalSignatureServices.cs" />
+    <Compile Include="SweeperActions\SystemSettings\ResetExternalAssetStorageProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetExternalAuthenticationServices.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetExternalStorageProviders.cs" />
     <Compile Include="SweeperActions\SystemSettings\ResetFinancialGateways.cs" />
@@ -203,7 +208,6 @@
     <Compile Include="Utility\IAsyncRunnable.cs" />
     <Compile Include="Utility\ProgressEventArgs.cs" />
     <Compile Include="Utility\ProgressLine.cs" />
-    <Compile Include="Utility\RockDomain.cs" />
     <Compile Include="Utility\CountProgressReporter.cs" />
     <Compile Include="Utility\Support.cs" />
     <Compile Include="SweeperController.cs" />

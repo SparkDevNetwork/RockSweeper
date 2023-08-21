@@ -8,11 +8,11 @@ namespace RockSweeper.SweeperActions.SystemSettings
     /// <summary>
     /// Resets the financial gateway configuration attributes.
     /// </summary>
-    /// <param name="actionData">The action data.</param>
     [ActionId( "57da3ba1-4166-446a-a998-be7229a32b52" )]
     [Title( "Reset Financial Gateways" )]
     [Description( "Resets all financial gateways except the test gateway to system default values." )]
     [Category( "System Settings" )]
+    [ConflictsWithAction( typeof( DisableFinancialGateways ) )]
     public class ResetFinancialGateways : SweeperAction
     {
         public override async Task ExecuteAsync()
