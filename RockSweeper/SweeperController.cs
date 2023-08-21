@@ -221,11 +221,20 @@ namespace RockSweeper
         public Dictionary<string, string[]> ScrubCommonTables { get; } = new Dictionary<string, string[]>
         {
             { "BenevolenceRequest", new[] { "RequestText", "ResultSummary" } },
-            { "Communication", new[] { "Message" } },
-            { "Note", new[] { "Text" } },
             { "DefinedValue", new[] { "Value", "Description" } },
             { "HtmlContent", new[] { "Content" } },
             { "Group", new[] { "Description" } }
+        };
+
+        /// <summary>
+        /// The tables that are scrubbed for person names.
+        /// </summary>
+        public Dictionary<string, string[]> ScrubNameTables { get; } = new Dictionary<string, string[]>
+        {
+            { "Communication", new[] { "FromName" } },
+            { "CommunicationTemplate", new[] { "FromName" } },
+            { "RegistrationTemplate", new[] { "ConfirmationFromName", "PaymentReminderFromName", "ReminderFromName", "RequestEntryName", "WaitListTransitionFromName" } },
+            { "SystemEmail", new[] { "FromName" } }
         };
 
         /// <summary>
@@ -250,6 +259,7 @@ namespace RockSweeper
         /// </summary>
         public Dictionary<string, string[]> ScrubPhoneTables { get; } = new Dictionary<string, string[]>
         {
+            { "CommunicationResponse", new[] { "MessageKey" } },
             { "RegistrationInstance", new[] { "ContactPhone" } },
             { "EventItemOccurrence", new[] { "ContactPhone" } },
             { "BenevolenceRequest", new[] { "HomePhoneNumber", "CellPhoneNumber", "WorkPhoneNumber" } },
@@ -1708,7 +1718,7 @@ ELSE
 
             await ProcessItemsInParallelAsync( rowIds, 1000, async ( itemIds ) =>
             {
-                var rows = await SqlQueryAsync( $"SELECT [Id], [{columns}] FROM [{tableName}] WHERE [Id] IN ({string.Join( ",", itemIds )})" );
+                var rows = await SqlQueryAsync( $"SELECT [Id], [{columns}] FROM [{tableName}] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", itemIds )})" );
 
                 for ( int i = 0; i < rows.Count; i++ )
                 {

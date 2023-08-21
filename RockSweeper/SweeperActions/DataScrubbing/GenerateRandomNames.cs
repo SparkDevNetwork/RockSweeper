@@ -22,14 +22,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             var processedPersonIds = new List<int>();
             var processedFamilyIds = new List<int>();
             var businessGuid = new Guid( "BF64ADD3-E70A-44CE-9C4B-E76BBED37550" );
-            var scrubTables = new Dictionary<string, string[]>
-            {
-                { "Communication", new[] { "FromName" } },
-                { "CommunicationTemplate", new[] { "FromName" } },
-                { "RegistrationTemplate", new[] { "ConfirmationFromName", "PaymentReminderFromName", "ReminderFromName", "RequestEntryName", "WaitListTransitionFromName" } },
-                { "SystemEmail", new[] { "FromName" } }
-            };
-            int stepCount = 6 + scrubTables.Count - 1;
+            int stepCount = 6 + Sweeper.ScrubNameTables.Count - 1;
 
             //
             // Stage 1: Update Person table
@@ -321,7 +314,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                 return fromNameLookup[oldValue];
             }
             int tableStep = 0;
-            foreach ( var tc in scrubTables )
+            foreach ( var tc in Sweeper.ScrubNameTables )
             {
                 await Sweeper.ScrubTableTextColumnsAsync( tc.Key, tc.Value, scrubFromName, p =>
                 {

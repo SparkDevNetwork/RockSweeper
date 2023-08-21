@@ -24,9 +24,6 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
             //
             // Stage 1: Replace all Person e-mail addresses.
-            // 51.26 single thread.
-            // 10.43 multi-threaded.
-            // 4.26 multi-threaded bulk update.
             //
             var peopleAddresses = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Email] FROM [Person] WHERE [Email] IS NOT NULL AND [Email] != '' ORDER BY [Id]" );
             await Sweeper.ProcessItemsInParallelAsync( peopleAddresses, 1000, async ( items ) =>
@@ -36,9 +33,9 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 foreach ( var p in items )
                 {
                     var changes = new Dictionary<string, object>
-                        {
+                    {
                         { "Email", Sweeper.GenerateFakeEmailAddressForAddress( p.Item2 ) }
-                        };
+                    };
 
                     bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( p.Item1, changes ) );
                 }

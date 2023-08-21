@@ -62,7 +62,7 @@ WHERE [Guid] IN (
 
         private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubGroupsAsync( List<int> groupIds )
         {
-            var groups = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Name] FROM [Group] WHERE [Id] IN ({string.Join( ",", groupIds )}) ORDER BY [Id]" ) ).ToObjects<Group>();
+            var groups = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Name] FROM [Group] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", groupIds )}) ORDER BY [Id]" ) ).ToObjects<Group>();
             var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var group in groups )

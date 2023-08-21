@@ -49,7 +49,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
         {
             var fieldValueRegex = new Regex( "(<span class=['\"]field-value['\"]>)([^<]*)(<\\/span>)" );
             var loginFieldValueRegex = new Regex( "(.*logged in.*<span class=['\"]field-name['\"]>)([^<]*)(<\\/span>)" );
-            var historyItems = await Sweeper.SqlQueryAsync( $"SELECT * FROM [History] WHERE [Id] IN ({string.Join( ",", items )})" );
+            var historyItems = await Sweeper.SqlQueryAsync( $"SELECT * FROM [History] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", items )})" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var history in historyItems )

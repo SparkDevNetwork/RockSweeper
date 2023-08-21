@@ -57,7 +57,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubConnectionOpportunitiesAsync( List<int> ids )
         {
-            var opportunities = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Name], [PublicName], [Description] FROM [ConnectionOpportunity] WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" ) ).ToObjects<ConnectionOpportunity>();
+            var opportunities = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Name], [PublicName], [Description] FROM [ConnectionOpportunity] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" ) ).ToObjects<ConnectionOpportunity>();
             var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var opportunity in opportunities )
