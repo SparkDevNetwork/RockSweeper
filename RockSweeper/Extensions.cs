@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
@@ -12,6 +13,16 @@ namespace RockSweeper
 {
     public static class Extensions
     {
+        /// <summary>
+        /// The regular expression to match individual words.
+        /// </summary>
+        private static readonly Regex WordRegex = new Regex( @"\b\w{3,}\b" );
+
+        /// <summary>
+        /// The regular expression to match words not inside HTML tags.
+        /// </summary>
+        private static readonly Regex NonHtmlWordRegex = new Regex( @"(<[^>]+>)|\w+" );
+
         /// <summary>
         /// Gets the enum title from it's attribute or name.
         /// </summary>
@@ -253,6 +264,62 @@ namespace RockSweeper
         public static AsyncConsumer<T> Consume<T>( this IAsyncConsumable<T> consumable, Func<T, Task> processor, int? maxConcurrency = null )
         {
             return new AsyncConsumer<T>( consumable, processor, maxConcurrency );
+        }
+
+        /// <summary>
+        /// Replaces words in the input string with lorem ipsum content while
+        /// preserving punctuation.
+        /// </summary>
+        /// <param name="lorem">The lorem content to generate words from.</param>
+        /// <param name="input">The input string to be modified.</param>
+        /// <returns>A new string that has been replaced with lorem ispum words.</returns>
+        public static string ReplaceWords( this Bogus.DataSets.Lorem lorem, string input )
+        {
+            return WordRegex.Replace( input, m =>
+            {
+                var word = lorem.Word();
+
+                if ( char.IsUpper( m.Value[0] ) )
+                {
+                    return word.Substring( 0, 1 ).ToUpper() + word.Substring( 1 );
+                }
+                else
+                {
+                    return word;
+                }
+            } );
+        }
+
+        /// <summary>
+        /// Replaces words in the input string with lorem ipsum content while
+        /// preserving punctuation. This method should be fairly safe to use
+        /// in content containing some HTML tags.
+        /// </summary>
+        /// <param name="lorem">The lorem content to generate words from.</param>
+        /// <param name="input">The input string to be modified.</param>
+        /// <returns>A new string that has been replaced with lorem ispum words.</returns>
+        public static string ReplaceNonHtmlWords( this Bogus.DataSets.Lorem lorem, string input )
+        {
+            return NonHtmlWordRegex.Replace( input, m =>
+            {
+                if ( m.Groups[1].Success )
+                {
+                    return m.Value;
+                }
+                else
+                {
+                    var word = lorem.Word();
+
+                    if ( char.IsUpper( m.Value[0] ) )
+                    {
+                        return word.Substring( 0, 1 ).ToUpper() + word.Substring( 1 );
+                    }
+                    else
+                    {
+                        return word;
+                    }
+                }
+            } );
         }
     }
 }

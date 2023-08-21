@@ -13,6 +13,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Description( "Clears as much sensitive information from background checks as possible." )]
     [Category( "Data Scrubbing" )]
     [AfterAction( typeof( GenerateRandomNames ) )]
+    [ConflictsWithAction( typeof( RemoveBackgroundCheckData ) )]
     public class SanitizeBackgroundCheckData : SweeperAction
     {
         public override async Task ExecuteAsync()
