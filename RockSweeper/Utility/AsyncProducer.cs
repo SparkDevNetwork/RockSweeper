@@ -50,11 +50,6 @@ namespace RockSweeper.Utility
         private readonly BlockingCollection<T> _collection = new BlockingCollection<T>();
 
         /// <summary>
-        /// Internal event to know when new items can be read.
-        /// </summary>
-        private readonly AsyncAutoResetEvent _dataReady = new AsyncAutoResetEvent( false );
-
-        /// <summary>
         /// The function that will produce items.
         /// </summary>
         private readonly Func<AsyncProducer<T>, CancellationToken, Task> _factory;
@@ -64,6 +59,16 @@ namespace RockSweeper.Utility
         /// </summary>
         private readonly int? _maxConcurrency;
 
+        /// <summary>
+        /// The semaphore the tracks how many items we can store.
+        /// </summary>
+        private readonly SemaphoreSlim _addToBufferLock;
+
+        /// <summary>
+        /// Indicates that items are in the buffer ready to be read.
+        /// </summary>
+        private readonly SemaphoreSlim _readFromBufferLock = new SemaphoreSlim( 0 );
+
         #endregion
 
         #region Constructors
@@ -72,9 +77,10 @@ namespace RockSweeper.Utility
         /// Creates a new instance of <see cref="AsyncProducer{T}"/> that will
         /// have it's items provided via the <see cref="Enqueue(T)"/> method.
         /// </summary>
-        public AsyncProducer()
+        public AsyncProducer( int maximumBufferSize = 100 )
         {
             _collection = new BlockingCollection<T>();
+            _addToBufferLock = new SemaphoreSlim( maximumBufferSize );
         }
 
         /// <summary>
@@ -137,10 +143,24 @@ namespace RockSweeper.Utility
         /// Adds a new item to the queue.
         /// </summary>
         /// <param name="item">The item to be processed.</param>
-        public void Enqueue( T item )
+        public async Task EnqueueAsync( T item, CancellationToken cancellationToken )
+        {
+            if ( _addToBufferLock != null )
+            {
+                await _addToBufferLock.WaitAsync( cancellationToken );
+            }
+
+            Enqueue( item );
+        }
+
+        /// <summary>
+        /// Adds a new item to the queue.
+        /// </summary>
+        /// <param name="item">The item to be processed.</param>
+        private void Enqueue( T item )
         {
             _collection.Add( item );
-            _dataReady.Set();
+            _readFromBufferLock.Release();
         }
 
         /// <summary>
@@ -154,19 +174,21 @@ namespace RockSweeper.Utility
         /// <inheritdoc/>
         public async Task<T> DequeueAsync( CancellationToken cancellationToken = default )
         {
-            T item;
+            var timeout = TimeSpan.FromMilliseconds( 50 );
 
-            while ( !_collection.TryTake( out item ) )
+            while ( !await _readFromBufferLock.WaitAsync( timeout, cancellationToken ) )
             {
                 if ( _collection.IsCompleted )
                 {
                     throw new TaskCanceledException();
                 }
+            }
 
-                // It's possible two tasks each this point at the same time
-                // with only 1 item left in the queue so we need to use a
-                // timeout otherwise one task will be stuck waiting forever.
-                await _dataReady.WaitAsync( TimeSpan.FromMilliseconds( 50 ), cancellationToken );
+            var item = _collection.Take( cancellationToken );
+
+            if ( _addToBufferLock != null )
+            {
+                _addToBufferLock.Release();
             }
 
             return item;

@@ -195,7 +195,6 @@
     <Compile Include="SweeperActions\SystemSettings\SanitizeApplicationRoots.cs" />
     <Compile Include="Utility\Address.cs" />
     <Compile Include="Attributes\AfterActionAttribute.cs" />
-    <Compile Include="Utility\AsyncAutoResetEvent.cs" />
     <Compile Include="Utility\AsyncConsumer.cs" />
     <Compile Include="Utility\AsyncPipe.cs" />
     <Compile Include="Utility\AsyncProducer.cs" />

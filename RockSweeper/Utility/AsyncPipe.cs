@@ -61,15 +61,17 @@ namespace RockSweeper.Utility
         {
             var consumer = new AsyncConsumer<TIn>( _consumable, async item =>
             {
-                _producer.Enqueue( await _converter( item ) );
+                await _producer.EnqueueAsync( await _converter( item ), cancellationToken );
             }, _maxConcurrency );
+
+            var consumerTask = consumer.RunAsync( cancellationToken );
 
             if ( _consumable is IAsyncRunnable runnable )
             {
                 await runnable.RunAsync( cancellationToken );
             }
 
-            await consumer.RunAsync( cancellationToken );
+            await consumerTask;
 
             _producer.Complete();
         }
