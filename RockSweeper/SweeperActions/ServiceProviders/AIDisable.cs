@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the AI services.
+    /// Updates the Rock configuration to ensure that all AI providers are disabled.
     /// </summary>
     [ActionId( "9deb7575-f55c-4501-8635-30c011c16665" )]
-    [Title( "Disable AI Services" )]
-    [Description( "Updates the Rock configuration to ensure that all AI services are disabled." )]
-    [Category( "System Settings" )]
+    [Title( "AI (Disable)" )]
+    [Description( "Updates the Rock configuration to ensure that all AI providers are disabled." )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetAIServices ) )]
-    public class DisableAIServices : SweeperAction
+    [ConflictsWithAction( typeof( AIReset ) )]
+    public class AIDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Resets the signature document providers.
+    /// Resets all signed document providers to system default values.
     /// </summary>
     [ActionId( "59fd05b1-0263-4442-9d63-7491e254bcd1" )]
-    [Title( "Reset Signature Document Providers" )]
+    [Title( "Signature Document (Reset)" )]
     [Description( "Resets all signed document providers to system default values." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableSignatureDocumentProviders ) )]
-    public class ResetSignatureDocumentProviders : SweeperAction
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( SignatureDocumentDisable ) )]
+    public class SignatureDocumentReset : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

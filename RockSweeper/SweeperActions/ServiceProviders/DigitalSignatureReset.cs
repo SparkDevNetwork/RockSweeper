@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Resets the digital signature services.
+    /// Resets all digital signature services to system default values.
     /// </summary>
     [ActionId( "4e60e8cf-38aa-4cbd-9fd2-013ae2aab95a" )]
-    [Title( "Reset Digital Signature Services" )]
+    [Title( "Digital Signature (Reset)" )]
     [Description( "Resets all digital signature services to system default values." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableDigitalSignatureServices ) )]
-    public class ResetDigitalSignatureServices : SweeperAction
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( DigitalSignatureDisable ) )]
+    public class DigitalSignatureReset : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

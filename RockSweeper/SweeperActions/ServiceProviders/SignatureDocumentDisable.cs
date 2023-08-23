@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the signature document providers.
+    /// Updates the Rock configuration to ensure that all signed document providers are disabled.
     /// </summary>
     [ActionId( "0d1246a9-8a19-4658-a1c5-c8804e8bfeab" )]
-    [Title( "Disable Signature Document Providers" )]
+    [Title( "Signature Document (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that all signed document providers are disabled." )]
-    [Category( "System Settings" )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetSignatureDocumentProviders ) )]
-    public class DisableSignatureDocumentProviders : SweeperAction
+    [ConflictsWithAction( typeof( SignatureDocumentReset ) )]
+    public class SignatureDocumentDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

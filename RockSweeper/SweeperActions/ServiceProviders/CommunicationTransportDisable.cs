@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the communication transports.
+    /// Updates the Rock configuration to ensure that all communication transports are disabled.
     /// </summary>
     [ActionId( "b55c9a45-763d-45d7-8a77-dc0a93fc542b" )]
-    [Title( "Disable Communication Transports" )]
+    [Title( "Communication Transport (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that all communication transports are disabled." )]
-    [Category( "System Settings" )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetCommunicationTransports ) )]
-    public class DisableCommunicationTransports : SweeperAction
+    [ConflictsWithAction( typeof( CommunicationTransportReset ) )]
+    public class CommunicationTransportDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

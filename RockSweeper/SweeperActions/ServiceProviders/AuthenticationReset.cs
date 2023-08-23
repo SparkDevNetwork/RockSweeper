@@ -3,19 +3,19 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Resets the authentication services.
+    /// Resets authentication services other than database and PIN to system default values.
     /// </summary>
     [ActionId( "29386c4e-38da-4e83-8d8d-058f735a087c" )]
-    [Title( "Reset Authentication Services" )]
+    [Title( "Authentication (Reset)" )]
     [Description( "Resets authentication services other than database and PIN to system default values." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableAuthenticationServices ) )]
-    [ConflictsWithAction( typeof( DisableExternalAuthenticationServices ) )]
-    [ConflictsWithAction( typeof( ResetExternalAuthenticationServices ) )]
-    public class ResetAuthenticationServices : SweeperAction
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( AuthenticationDisable ) )]
+    [ConflictsWithAction( typeof( AuthenticationDisableExternal ) )]
+    [ConflictsWithAction( typeof( AuthenticationResetExternal ) )]
+    public class AuthenticationReset : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

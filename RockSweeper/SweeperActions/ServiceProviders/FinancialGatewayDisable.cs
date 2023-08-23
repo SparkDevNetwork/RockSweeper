@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the financial gateways.
+    /// Updates the Rock configuration to ensure that all financial gateways except the test gateway are disabled.
     /// </summary>
     [ActionId( "47e49503-5a38-4781-8695-4f69d3296e7e" )]
-    [Title( "Disable Financial Gateways" )]
+    [Title( "Financial Gateway (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that all financial gateways except the test gateway are disabled." )]
-    [Category( "System Settings" )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetFinancialGateways ) )]
-    public class DisableFinancialGateways : SweeperAction
+    [ConflictsWithAction( typeof( FinancialGatewayReset ) )]
+    public class FinancialGatewayDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

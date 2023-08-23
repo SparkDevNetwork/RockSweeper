@@ -3,19 +3,19 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
     /// Disables the authentication services.
     /// </summary>
     [ActionId( "a68b25fb-6ec2-4d3d-b1de-16aae76c47d6" )]
-    [Title( "Disable Authentication Services" )]
+    [Title( "Authentication (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that authentication services other than database and PIN are disabled." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableExternalAuthenticationServices ) )]
-    [ConflictsWithAction( typeof( ResetAuthenticationServices ) )]
-    [ConflictsWithAction( typeof( ResetExternalAuthenticationServices ) )]
-    public class DisableAuthenticationServices : SweeperAction
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( AuthenticationDisableExternal ) )]
+    [ConflictsWithAction( typeof( AuthenticationReset ) )]
+    [ConflictsWithAction( typeof( AuthenticationResetExternal ) )]
+    public class AuthenticationDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

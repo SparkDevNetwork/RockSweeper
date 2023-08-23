@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Resets the financial gateway configuration attributes.
+    /// Resets all financial gateways except the test gateway to system default values.
     /// </summary>
     [ActionId( "57da3ba1-4166-446a-a998-be7229a32b52" )]
-    [Title( "Reset Financial Gateways" )]
+    [Title( "Financial Gateway (Reset)" )]
     [Description( "Resets all financial gateways except the test gateway to system default values." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableFinancialGateways ) )]
-    public class ResetFinancialGateways : SweeperAction
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( FinancialGatewayDisable ) )]
+    public class FinancialGatewayReset : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

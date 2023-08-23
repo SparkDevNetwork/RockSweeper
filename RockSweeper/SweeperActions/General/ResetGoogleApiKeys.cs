@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.General
 {
     /// <summary>
     /// Resets the google API keys.
@@ -11,7 +11,7 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [ActionId( "d5e352c6-b1bf-405a-9934-6f875725a5c1" )]
     [Title( "Reset Google API Keys" )]
     [Description( "Clears the Google API keys stored in global attributes." )]
-    [Category( "System Settings" )]
+    [Category( "General" )]
     public class ResetGoogleApiKeys : SweeperAction
     {
         public override async Task ExecuteAsync()

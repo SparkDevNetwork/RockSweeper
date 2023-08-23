@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.General
 {
     /// <summary>
     /// Configures Rock to use localhost SMTP email delivery.
@@ -12,10 +12,10 @@ namespace RockSweeper.SweeperActions.SystemSettings
     [ActionId( "24ea3e6e-04ab-4896-9174-bc275f67f766" )]
     [Title( "Configure For Localhost SMTP" )]
     [Description( "Updates the communication settings to use a localhost SMTP server." )]
-    [Category( "System Settings" )]
+    [Category( "General" )]
     [DefaultValue( true )]
-    [AfterAction( typeof( DisableCommunicationTransports ) )]
-    [AfterAction( typeof( ResetCommunicationTransports ) )]
+    [AfterAction( typeof( ServiceProviders.CommunicationTransportDisable ) )]
+    [AfterAction( typeof( ServiceProviders.CommunicationTransportReset ) )]
     public class ConfigureForLocalhostSmtp : SweeperAction
     {
         public override async Task ExecuteAsync()

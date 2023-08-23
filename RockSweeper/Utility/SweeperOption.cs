@@ -93,7 +93,7 @@ namespace RockSweeper.Utility
         /// <value>
         /// The full display name.
         /// </value>
-        public string FullName => $"{Category} >> {Title}";
+        public string FullName => $"{Category} | {Title}";
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="SweeperOption"/> is enabled.

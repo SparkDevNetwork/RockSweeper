@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the digital signature services.
+    /// Updates the Rock configuration to ensure that all digital signature services are disabled.
     /// </summary>
     [ActionId( "218ec162-27a9-4182-986e-868c35c9d63d" )]
-    [Title( "Disable Digital Signature Services" )]
+    [Title( "Digital Signature (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that all digital signature services are disabled." )]
-    [Category( "System Settings" )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetDigitalSignatureServices ) )]
-    public class DisableDigitalSignatureServices : SweeperAction
+    [ConflictsWithAction( typeof( DigitalSignatureReset ) )]
+    public class DigitalSignatureDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

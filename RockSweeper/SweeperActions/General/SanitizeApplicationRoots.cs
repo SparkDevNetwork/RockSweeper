@@ -3,16 +3,16 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.General
 {
     /// <summary>
-    /// Sanitizes the application roots.
+    /// Modifies the PublicApplicationRoot and InternalApplicationRoot to safe values.
     /// </summary>
     /// <param name="actionData">The action data.</param>
     [ActionId( "dcb7cde1-7764-4ce4-bbb8-13001c4cc9dd" )]
     [Title( "Sanitize Application Roots" )]
     [Description( "Modifies the PublicApplicationRoot and InternalApplicationRoot to safe values." )]
-    [Category( "System Settings" )]
+    [Category( "General" )]
     [DefaultValue( true )]
     public class SanitizeApplicationRoots : SweeperAction
     {

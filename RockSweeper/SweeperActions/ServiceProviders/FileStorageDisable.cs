@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the external storage providers.
+    /// Updates the Rock configuration to ensure that file storage providers other than database and filesystem are disabled.
     /// </summary>
     [ActionId( "604d8e13-9f32-4542-8916-13e204695838" )]
-    [Title( "Disable External Storage Providers" )]
-    [Description( "Updates the Rock configuration to ensure that storage providers other than database and filesystem are disabled." )]
-    [Category( "System Settings" )]
+    [Title( "File Storage (Disable)" )]
+    [Description( "Updates the Rock configuration to ensure that file storage providers other than database and filesystem are disabled." )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetExternalStorageProviders ) )]
-    public class DisableExternalStorageProviders : SweeperAction
+    [ConflictsWithAction( typeof( FileStorageReset ) )]
+    public class FileStorageDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

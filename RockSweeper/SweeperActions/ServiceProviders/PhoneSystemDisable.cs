@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Disables the phone systems.
+    /// Updates the Rock configuration to ensure that all phone systems are disabled.
     /// </summary>
     [ActionId( "9c4bf948-5dd7-4bc0-ac2e-0cfb2493d02f" )]
-    [Title( "Disable Phone Systems" )]
+    [Title( "Phone System (Disable)" )]
     [Description( "Updates the Rock configuration to ensure that all phone systems are disabled." )]
-    [Category( "System Settings" )]
+    [Category( "Service Providers" )]
     [DefaultValue( true )]
-    [ConflictsWithAction( typeof( ResetPhoneSystems ) )]
-    public class DisablePhoneSystems : SweeperAction
+    [ConflictsWithAction( typeof( PhoneSystemReset ) )]
+    public class PhoneSystemDisable : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

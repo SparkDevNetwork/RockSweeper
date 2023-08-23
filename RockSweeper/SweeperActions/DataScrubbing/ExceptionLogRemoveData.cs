@@ -3,16 +3,16 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.General
+namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Clears the exception log table.
+    /// Clears out the contents of the Rock Exception Log.
     /// </summary>
     [ActionId( "89b28ddd-a138-4b59-91e4-ebf8019c1cad" )]
-    [Title( "Clear Exception Log" )]
+    [Title( "Exception Log (Remove Data)" )]
     [Description( "Clears out the contents of the Rock Exception Log." )]
-    [Category( "General" )]
-    public class ClearExceptionLog : SweeperAction
+    [Category( "Data Scrubbing" )]
+    public class ExceptionLogRemoveData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

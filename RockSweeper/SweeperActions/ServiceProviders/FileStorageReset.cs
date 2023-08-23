@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
 
-namespace RockSweeper.SweeperActions.SystemSettings
+namespace RockSweeper.SweeperActions.ServiceProviders
 {
     /// <summary>
-    /// Resets the external storage providers.
+    /// Resets file storage providers other than database and filesystem to system default values.
     /// </summary>
     [ActionId( "405bb345-d1a4-4bc3-861c-9fab90c0c2da" )]
-    [Title( "Reset External Storage Providers" )]
-    [Description( "Resets storage providers other than database and filesystem to system default values." )]
-    [Category( "System Settings" )]
-    [ConflictsWithAction( typeof( DisableExternalStorageProviders ) )]
-    public class ResetExternalStorageProviders : SweeperAction
+    [Title( "File Storage (Reset)" )]
+    [Description( "Resets file storage providers other than database and filesystem to system default values." )]
+    [Category( "Service Providers" )]
+    [ConflictsWithAction( typeof( FileStorageDisable ) )]
+    public class FileStorageReset : SweeperAction
     {
         public override async Task ExecuteAsync()
         {
