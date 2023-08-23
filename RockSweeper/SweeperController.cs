@@ -923,7 +923,14 @@ namespace RockSweeper
 
                     Interlocked.Increment( ref _sqlQueryCount );
 
-                    return ( T ) await command.ExecuteScalarAsync();
+                    var r = await command.ExecuteScalarAsync();
+
+                    if ( r == DBNull.Value  )
+                    {
+                        return ( T ) ( object ) null;
+                    }
+
+                    return ( T ) r;
                 }
             }
         }

@@ -38,8 +38,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task ProcessComponentsAsync()
         {
-            var minId = await Sweeper.SqlScalarAsync<int>( "SELECT MIN([Id]) FROM [InteractionComponent]" );
-            var maxId = await Sweeper.SqlScalarAsync<int>( "SELECT MAX([Id]) FROM [InteractionComponent]" );
+            var minId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MIN([Id]) FROM [InteractionComponent]" ) ?? 0 );
+            var maxId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MAX([Id]) FROM [InteractionComponent]" ) ?? 0 );
             var idChunks = new List<IdChunk>();
 
             for ( int id = minId; id <= maxId; id += 25_000 )
@@ -64,8 +64,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task ProcessInteractionsAsync()
         {
-            var minId = await Sweeper.SqlScalarAsync<int>( "SELECT MIN([Id]) FROM [Interaction]" );
-            var maxId = await Sweeper.SqlScalarAsync<int>( "SELECT MAX([Id]) FROM [Interaction]" );
+            var minId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MIN([Id]) FROM [Interaction]" ) ?? 0 );
+            var maxId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MAX([Id]) FROM [Interaction]" ) ?? 0 );
             var idChunks = new List<IdChunk>();
 
             for ( int id = minId; id <= maxId; id += 25_000 )
@@ -90,8 +90,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task ProcessInteractionSessionsAsync()
         {
-            var minId = await Sweeper.SqlScalarAsync<int>( "SELECT MIN([Id]) FROM [InteractionSession]" );
-            var maxId = await Sweeper.SqlScalarAsync<int>( "SELECT MAX([Id]) FROM [InteractionSession]" );
+            var minId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MIN([Id]) FROM [InteractionSession]" ) ?? 0 );
+            var maxId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MAX([Id]) FROM [InteractionSession]" ) ?? 0 );
             var idChunks = new List<IdChunk>();
 
             for ( int id = minId; id <= maxId; id += 25_000 )
@@ -156,8 +156,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task ProcessInteractionSessionLocationsAsync()
         {
-            var minId = await Sweeper.SqlScalarAsync<int>( "SELECT MIN([Id]) FROM [InteractionSessionLocation]" );
-            var maxId = await Sweeper.SqlScalarAsync<int>( "SELECT MAX([Id]) FROM [InteractionSessionLocation]" );
+            var minId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MIN([Id]) FROM [InteractionSessionLocation]" ) ?? 0 );
+            var maxId = ( await Sweeper.SqlScalarAsync<int?>( "SELECT MAX([Id]) FROM [InteractionSessionLocation]" ) ?? 0 );
             var idChunks = new List<IdChunk>();
 
             for ( int id = minId; id <= maxId; id += 25_000 )
