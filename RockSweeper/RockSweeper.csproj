@@ -153,6 +153,7 @@
     <Compile Include="SweeperActions\DataScrubbing\SanitizeInteractionData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeNotes.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizePersonAlternateIdentifiers.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\SanitizeWebFarmData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ScrubWorkflowLog.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ShuffleLocationAddresses.cs" />
     <Compile Include="SweeperActions\General\ClearExceptionLog.cs" />
