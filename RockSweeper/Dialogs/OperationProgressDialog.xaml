@@ -76,7 +76,7 @@
                 <DataGridTemplateColumn Width="80">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Path=Duration}" ToolTip="{Binding Path=Tooltip}" />
+                            <TextBlock Text="{Binding Path=Duration}" ToolTip="{Binding Path=Tooltip}" HorizontalAlignment="Center" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
