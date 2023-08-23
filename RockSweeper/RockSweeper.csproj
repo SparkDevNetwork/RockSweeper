@@ -141,6 +141,7 @@
     <Compile Include="SweeperActions\DataScrubbing\GenerateRandomNames.cs" />
     <Compile Include="SweeperActions\DataScrubbing\GenerateRandomPhoneNumbers.cs" />
     <Compile Include="SweeperActions\DataScrubbing\InsertHistoryPlaceholders.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\MediaElementData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\RemoveBackgroundCheckData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeBackgroundCheckData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\SanitizeBenevolenceRequestData.cs" />
