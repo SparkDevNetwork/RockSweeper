@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,19 +60,21 @@ namespace RockSweeper.Utility
         /// <inheritdoc/>
         public async Task RunAsync( CancellationToken cancellationToken = default )
         {
+            var tasks = new List<Task>();
+
             var consumer = new AsyncConsumer<TIn>( _consumable, async item =>
             {
                 await _producer.EnqueueAsync( await _converter( item ), cancellationToken );
             }, _maxConcurrency );
 
-            var consumerTask = consumer.RunAsync( cancellationToken );
-
             if ( _consumable is IAsyncRunnable runnable )
             {
-                await runnable.RunAsync( cancellationToken );
+                tasks.Add( runnable.RunAsync( cancellationToken ) );
             }
 
-            await consumerTask;
+            tasks.Add( consumer.RunAsync( cancellationToken ) );
+
+            await Task.WhenAll( tasks );
 
             _producer.Complete();
         }
