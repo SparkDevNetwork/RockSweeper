@@ -2,10 +2,15 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
+
+using Microsoft.Win32;
+
+using Newtonsoft.Json;
 
 using RockSweeper.Attributes;
 using RockSweeper.Dialogs;
@@ -279,6 +284,73 @@ namespace RockSweeper
             {
                 UpdateConflictingStates();
             }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the LoadSettings control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
+        protected void LoadSettings_Click( object sender, RoutedEventArgs e )
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Settings file (*.json)|*.json"
+            };
+
+            if ( dialog.ShowDialog() == false )
+            {
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText( dialog.FileName );
+                var settings = JsonConvert.DeserializeObject<SavedSweeperConfiguration>( json );
+
+                // Turn everything off first so there are no conflicts.
+                foreach ( var option in ConfigOptions )
+                {
+                    option.Selected = false;
+                }
+
+                foreach ( var option in ConfigOptions )
+                {
+                    option.Selected = settings.Actions.Contains( option.Id );
+                }
+            }
+            catch ( Exception ex )
+            {
+                System.Diagnostics.Debug.WriteLine( ex.Message );
+                MessageBox.Show( "Unable to parse settings file.", "Error" );
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the SaveSettings control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
+        protected void SaveSettings_Click( object sender, RoutedEventArgs e )
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Settings file (*.json)|*.json"
+            };
+
+            if ( dialog.ShowDialog() == false )
+            {
+                return;
+            }
+
+            var settings = new SavedSweeperConfiguration
+            {
+                Actions = ConfigOptions.Where( o => o.Selected ).Select( o => o.Id ).ToList()
+            };
+
+            var json = JsonConvert.SerializeObject( settings, Formatting.Indented );
+
+            File.WriteAllText( dialog.FileName, json );
         }
 
         #endregion

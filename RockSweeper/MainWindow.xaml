@@ -27,15 +27,30 @@
                 <Button Click="SelectAll_Click">
                     <StackPanel Orientation="Horizontal">
                         <fa:ImageAwesome Icon="CheckSquareOutline" Width="12" Margin="0, 0, 4, 0" />
-                        <TextBlock>All</TextBlock>
+                        <TextBlock>Select All</TextBlock>
                     </StackPanel>
                 </Button>
                 <Button Click="SelectNone_Click">
                     <StackPanel Orientation="Horizontal">
                         <fa:ImageAwesome Icon="SquareOutline" Width="12" Margin="0, 0, 4, 0" />
-                        <TextBlock>None</TextBlock>
+                        <TextBlock>Select None</TextBlock>
                     </StackPanel>
                 </Button>
+
+                <Button Click="LoadSettings_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <fa:ImageAwesome Icon="Upload" Width="12" Margin="0, 0, 4, 0" />
+                        <TextBlock>Load Settings</TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="SaveSettings_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <fa:ImageAwesome Icon="Download" Width="12" Margin="0, 0, 4, 0" />
+                        <TextBlock>Save Settings</TextBlock>
+                    </StackPanel>
+                </Button>
+
             </ToolBar>
             <ToolBar>
                 <Button Content="Preferences" Click="Preferences_Click" />
