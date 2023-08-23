@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -19,6 +20,9 @@ namespace RockSweeper.Dialogs
         private readonly SweeperConfiguration _configuration;
         private readonly CancellationTokenSource _operationCancellationTokenSource = new CancellationTokenSource();
         private readonly ViewModel _viewModel = new ViewModel();
+        private readonly Stopwatch _lineStopwatch = new Stopwatch();
+        private int _lineQueryStartCount = 0;
+        private Guid? _currentOperationId = null;
 
         public OperationProgressDialog( SweeperConfiguration configuration )
         {
@@ -58,17 +62,41 @@ namespace RockSweeper.Dialogs
                 _viewModel.CanCancel = true;
             } );
 
+            var timeUpdateTimer = new Timer( _ =>
+            {
+                Dispatcher.Invoke( () =>
+                {
+                    var operationId = _currentOperationId;
+
+                    if ( operationId == null )
+                    {
+                        return;
+                    }
+
+                    var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == operationId );
+
+                    progressLine.Duration = _lineStopwatch.Elapsed.ToString( "hh\\:mm\\:ss" );
+                } );
+            }, null, 100, 100 );
+
             try
             {
                 await sweeper.ExecuteAsync( orderedOptions );
             }
             catch ( Exception ex )
             {
+                timeUpdateTimer.Dispose();
                 sweeper.Dispose();
 
                 Dispatcher.Invoke( () =>
                 {
                     _viewModel.CanCancel = false;
+
+                    Exception e = ex;
+                    while ( e.InnerException != null )
+                    {
+                        e = e.InnerException;
+                    }
 
                     var progressLine = _viewModel.ProgressLines
                         .FirstOrDefault( p => p.State == ProgressLineState.Processing );
@@ -76,18 +104,18 @@ namespace RockSweeper.Dialogs
                     if ( progressLine != null )
                     {
                         progressLine.State = ProgressLineState.Failed;
+                        progressLine.Tooltip = $"Error: {ex.Message}";
                     }
 
-                    Exception e = ex;
-                    while ( e.InnerException != null )
-                    {
-                        e = e.InnerException;
-                    }
-                    MessageBox.Show( this, e.Message, "Error while processing" );
+                    var stackTrace = new EnhancedStackTrace( e ).ToString();
+
+                    MessageBox.Show( this, $"{e.Message}\n\n{stackTrace}", "Error while processing" );
                 } );
 
                 return;
             }
+
+            timeUpdateTimer.Dispose();
 
             Dispatcher.Invoke( () =>
             {
@@ -102,9 +130,14 @@ namespace RockSweeper.Dialogs
         {
             Dispatcher.InvokeAsync( () =>
             {
+                _lineStopwatch.Restart();
+                _lineQueryStartCount = ( ( SweeperController ) sender ).SqlQueryCount;
+                _currentOperationId = e.OperationId;
+
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
 
                 progressLine.State = ProgressLineState.Processing;
+                progressLine.Tooltip = "Running";
                 progressLine.Progress = e.Progress * 100;
                 progressLine.Message = e.Message;
 
@@ -139,10 +172,13 @@ namespace RockSweeper.Dialogs
                 progressLine.Progress = null;
                 progressLine.State = ProgressLineState.Completed;
                 progressLine.Message = string.Empty;
+                progressLine.Duration = _lineStopwatch.Elapsed.ToString( "hh\\:mm\\:ss" );
+                progressLine.Tooltip = $"Completed\nQuery Count: {(( ( SweeperController ) sender ).SqlQueryCount - _lineQueryStartCount):N0}";
 
                 var index = _viewModel.ProgressLines.IndexOf( progressLine );
 
                 _viewModel.Progress = ( index + 1 ) / ( double ) _viewModel.ProgressLines.Count;
+                _currentOperationId = null;
             } );
         }
 
@@ -186,7 +222,6 @@ namespace RockSweeper.Dialogs
                     OnPropertyChanged();
                 }
             }
-
 
             public bool CanCancel
             {

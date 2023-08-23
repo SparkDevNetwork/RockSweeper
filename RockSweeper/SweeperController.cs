@@ -514,11 +514,11 @@ namespace RockSweeper
 
             if ( step.HasValue && stepCount.HasValue )
             {
-                args = new ProgressEventArgs( actionId, percentage, $"Step {step} of {stepCount}" );
+                args = new ProgressEventArgs( actionId, percentage, $" Step {step}/{stepCount}" );
             }
             else if ( step.HasValue )
             {
-                args = new ProgressEventArgs( actionId, percentage, $"Step {step}" );
+                args = new ProgressEventArgs( actionId, percentage, $" Step {step}" );
             }
             else
             {

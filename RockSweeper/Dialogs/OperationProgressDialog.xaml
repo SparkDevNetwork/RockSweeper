@@ -59,11 +59,27 @@
                                              Icon="{Binding Path=Icon}"
                                              SpinDuration="2"
                                              Spin="{Binding Path=IsSpinning}"
-                                             Foreground="{Binding Path=Foreground}" />
+                                             Foreground="{Binding Path=Foreground}"
+                                             ToolTip="{Binding Path=Tooltip}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Binding="{Binding Path=Title}" Width="*" />
+
+                <DataGridTemplateColumn Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Path=Title}" ToolTip="{Binding Path=Tooltip}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Path=Duration}" ToolTip="{Binding Path=Tooltip}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

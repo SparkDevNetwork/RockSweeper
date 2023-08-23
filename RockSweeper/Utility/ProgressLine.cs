@@ -61,6 +61,11 @@ namespace RockSweeper.Utility
             {
                 var title = _title;
 
+                if ( !string.IsNullOrWhiteSpace( _message ) || _progress.HasValue )
+                {
+                    title += " |";
+                }
+
                 if ( !string.IsNullOrWhiteSpace( _message ) )
                 {
                     title += $" {_message}";
@@ -68,7 +73,7 @@ namespace RockSweeper.Utility
 
                 if ( _progress.HasValue )
                 {
-                    title += string.Format( " {0:0.00}%", _progress );
+                    title += string.Format( " ({0:0.00}%)", _progress );
                 }
 
                 return title;
@@ -124,6 +129,40 @@ namespace RockSweeper.Utility
                 }
             }
         }
+
+        /// <summary>
+        /// The tooltip message to use for this line.
+        /// </summary>
+        public string Tooltip
+        {
+            get => _tooltip;
+            set
+            {
+                if ( _tooltip != value )
+                {
+                    _tooltip = value;
+                    NotifyPropertyChanged( nameof( Tooltip ) );
+                }
+            }
+        }
+        private string _tooltip = "Waiting";
+
+        /// <summary>
+        /// The duration that this line item has been running.
+        /// </summary>
+        public string Duration
+        {
+            get => _duration;
+            set
+            {
+                if ( _duration != value )
+                {
+                    _duration = value;
+                    NotifyPropertyChanged( nameof( Duration ) );
+                }
+            }
+        }
+        private string _duration = "";
 
         /// <summary>
         /// Gets or sets the state.
