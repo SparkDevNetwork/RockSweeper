@@ -14,11 +14,11 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Inserts the history placeholders.
     /// </summary>
     [ActionId( "5cdcf31e-382f-4663-ad26-122814990187" )]
-    [Title( "Insert History Placeholders" )]
+    [Title( "History" )]
     [Description( "Modifies all History records to remove any identifying information." )]
     [Category( "Data Scrubbing" )]
-    [AfterAction( typeof( GenerateRandomLogins ) )]
-    public class InsertHistoryPlaceholders : SweeperAction
+    [AfterAction( typeof( LoginData ) )]
+    public class HistoryPlaceholderData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

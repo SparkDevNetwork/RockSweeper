@@ -13,10 +13,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes data related to connection requests by removing identifying information.
     /// </summary>
     [ActionId( "f489a377-d4a5-4737-9657-53a7b3b7374f" )]
-    [Title( "Sanitize Connection Requests" )]
+    [Title( "Connection Requests" )]
     [Description( "Sanitizes data related to connection requests by removing identifying information." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeConnectionRequests: SweeperAction
+    public class ConnectionRequestData : SweeperAction
     {
         /// <inheritdoc/>
         public override async Task ExecuteAsync()

@@ -15,7 +15,7 @@ namespace RockSweeper.SweeperActions.Storage
     [Title( "Move Binary Files Into Database" )]
     [Description( "Moves any binary file data stored externally into the database, this includes any filesystem storage." )]
     [Category( "Storage" )]
-    [AfterAction( typeof( DataScrubbing.RemoveBackgroundCheckData ) )]
+    [AfterAction( typeof( DataScrubbing.BackgroundCheckRemoveData ) )]
     public class MoveBinaryFilesIntoDatabase : SweeperAction
     {
         public override async Task ExecuteAsync()

@@ -7,14 +7,14 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Removes all the background check data.
+    /// Removes all background check data that can be found.
     /// </summary>
     [ActionId( "9083a514-b9bc-418c-b48f-86355399c37a" )]
-    [Title( "Remove Background Check Data" )]
+    [Title( "Background Checks (Remove Data)" )]
     [Description( "Removes all background check data that can be found." )]
     [Category( "Data Scrubbing" )]
-    [ConflictsWithAction( typeof( SanitizeBackgroundCheckData ) )]
-    public class RemoveBackgroundCheckData : SweeperAction
+    [ConflictsWithAction( typeof( BackgroundCheckData ) )]
+    public class BackgroundCheckRemoveData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

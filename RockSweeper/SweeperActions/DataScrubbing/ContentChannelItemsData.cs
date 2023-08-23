@@ -11,15 +11,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes the content channel items.
     /// </summary>
     [ActionId( "6ecb7b00-e1ed-44e9-b24e-e4beffbac9f3" )]
-    [Title( "Sanitize Content Channel Items" )]
+    [Title( "Content Channel Items" )]
     [Description( "Replaces content channel item content with ipsum text." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeContentChannelItems : SweeperAction
+    public class ContentChannelItemsData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {
             var contentChannelItems = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
-            var regex = new PCRE.PcreRegex( @"(<[^>]*>(*SKIP)(*F)|[^\W]\w+)" );
 
             for ( int i = 0; i < contentChannelItems.Count; i++ )
             {
@@ -27,15 +26,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( !string.IsNullOrWhiteSpace( contentChannelItems[i].Item2 ) )
                 {
-                    var newValue = regex.Replace( contentChannelItems[i].Item2, ( m ) =>
-                    {
-                        return Sweeper.DataFaker.Lorem.Word();
-                    } );
-
-                    if ( newValue != contentChannelItems[i].Item2 )
-                    {
-                        changes.Add( "Content", newValue );
-                    }
+                    changes.Add( "Content", Sweeper.DataFaker.Lorem.ReplaceNonHtmlWords( contentChannelItems[i].Item2 ) );
                 }
 
                 if ( changes.Any() )

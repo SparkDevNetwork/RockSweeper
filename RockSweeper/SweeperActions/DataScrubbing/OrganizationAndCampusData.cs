@@ -11,10 +11,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Generates the organization and campuses.
     /// </summary>
     [ActionId( "7a047807-1a42-413e-899a-b2a1fc90a889" )]
-    [Title( "Generate Organization and Campuses" )]
+    [Title( "Organization and Campuses" )]
     [Description( "Scrubs the organization name and URL as well as campus names and URLs." )]
     [Category( "Data Scrubbing" )]
-    public class GenerateOrganizationAndCampuses : SweeperAction
+    public class OrganizationAndCampusData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

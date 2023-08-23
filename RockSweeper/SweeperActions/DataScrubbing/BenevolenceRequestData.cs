@@ -9,13 +9,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Sanitizes the benevolence request data.
+    /// Scrubs out any government IDs as well as request and result text.
     /// </summary>
     [ActionId( "944fea3a-7826-4e9b-9539-eae3f26fa2ac" )]
-    [Title( "Sanitize Benevolence Request Data" )]
+    [Title( "Benevolence Requests" )]
     [Description( "Scrubs out any government IDs as well as request and result text." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeBenevolenceRequestData : SweeperAction
+    public class BenevolenceRequestData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

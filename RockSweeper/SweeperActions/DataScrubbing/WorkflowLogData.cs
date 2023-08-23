@@ -6,13 +6,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Scrubs the workflow log.
+    /// Modifies the log text to only include the activity and action and not the specific action text.
     /// </summary>
     [ActionId( "d6a36aad-f7ba-4ada-b018-f6aa4065f6bf" )]
-    [Title( "Scrub Workflow Log" )]
+    [Title( "Workflow Log" )]
     [Description( "Modifies the log text to only include the activity and action and not the specific action text." )]
     [Category( "Data Scrubbing" )]
-    public class ScrubWorkflowLog : SweeperAction
+    public class WorkflowLogData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

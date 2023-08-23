@@ -10,11 +10,14 @@ using RockSweeper.Attributes;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
+    /// <summary>
+    /// Removes all sensitive and identifying information from financial related records.
+    /// </summary>
     [ActionId( "73a6169f-6552-4dfd-b759-774573280cad" )]
-    [Title( "Sanitize Financial Records" )]
+    [Title( "Financial Records" )]
     [Description( "Removes all sensitive and identifying information from financial related records." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeFinancialRecords : SweeperAction
+    public class FinancialRecordData : SweeperAction
     {
         #region Constants
 

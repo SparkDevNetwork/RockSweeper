@@ -6,13 +6,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Empties the analytics source tables.
+    /// Removes all data from the AnalyticsSource tables.
     /// </summary>
     [ActionId( "8b6a47eb-006a-4734-a876-94f20b43b994" )]
-    [Title( "Empty Analytics Source Tables" )]
-    [Description( "Truncates the AnalyticsSource* tables so they contain no data." )]
+    [Title( "Analytics Source Tables (Remove Data)" )]
+    [Description( "Removes all data from the AnalyticsSource tables." )]
     [Category( "Data Scrubbing" )]
-    public class EmptyAnalyticsSourceTables : SweeperAction
+    public class AnalyticsSourceRemoveData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

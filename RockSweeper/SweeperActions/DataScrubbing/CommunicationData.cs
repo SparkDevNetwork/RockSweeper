@@ -13,10 +13,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes communications by replacing content with lorem ipsum text.
     /// </summary>
     [ActionId( "1e7dac9c-3002-4896-9dd3-fa2e4964e241" )]
-    [Title( "Sanitize Communications" )]
+    [Title( "Communications" )]
     [Description( "Sanitizes communications by replacing content with lorem ipsum text." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeCommunications : SweeperAction
+    public class CommunicationData : SweeperAction
     {
         /// <inheritdoc/>
         public override async Task ExecuteAsync()

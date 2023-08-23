@@ -8,13 +8,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Sanitizes the devices.
+    /// Replaces IPAddress with fake address information.
     /// </summary>
     [ActionId( "d23bfc10-7c58-4f9c-8497-553a6a5c7c1c" )]
-    [Title( "Sanitize Devices" )]
-    [Description( "Replacing IPAddress with fake address information." )]
+    [Title( "Devices" )]
+    [Description( "Replaces IPAddress with fake address information." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeDevices : SweeperAction
+    public class DeviceData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

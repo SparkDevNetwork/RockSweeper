@@ -15,7 +15,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     [Title( "Interactive Experiences (Remove Data)" )]
     [Description( "Removes all interactive experience data." )]
     [Category( "Data Scrubbing" )]
-    public class InteractiveExperiencesRemoveData : SweeperAction
+    public class InteractiveExperienceRemoveData : SweeperAction
     {
         private readonly int _stepCount = 6;
 

@@ -13,10 +13,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes any data regarding the web farm environment.
     /// </summary>
     [ActionId( "a46a95e5-d2c4-46fc-bffc-225ccc1a3987" )]
-    [Title( "Sanitize Web Farm Data" )]
+    [Title( "Web Farm Data" )]
     [Description( "Sanitizes any data regarding the web farm environment." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeWebFarmData : SweeperAction
+    public class WebFarmData : SweeperAction
     {
         /// <inheritdoc/>
         public override async Task ExecuteAsync()

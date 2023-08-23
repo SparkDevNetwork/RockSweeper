@@ -14,11 +14,11 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes group names by attempting to remove proper names.
     /// </summary>
     [ActionId( "02c2d628-ac02-4a36-9f0a-1f4b34c72036" )]
-    [Title( "Sanitize Group Names" )]
+    [Title( "Group Names" )]
     [Description( "Sanitizes group names by attempting to remove proper names." )]
     [Category( "Data Scrubbing" )]
-    [AfterAction( typeof( GenerateRandomNames ) )]
-    public class SanitizeGroupNames : SweeperAction
+    [AfterAction( typeof( NameData ) )]
+    public class GroupNameData : SweeperAction
     {
         /// <summary>
         /// The regular expression to match individual words.

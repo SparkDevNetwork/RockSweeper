@@ -9,13 +9,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Generates the random phone numbers.
+    /// Replaces any phone numbers found in the system with generated values.
     /// </summary>
     [ActionId( "46f34fe1-4577-425d-9cdf-cf54da349365" )]
-    [Title( "Generate Random Phone Numbers" )]
+    [Title( "Phone Numbers" )]
     [Description( "Replaces any phone numbers found in the system with generated values." )]
     [Category( "Data Scrubbing" )]
-    public class GenerateRandomPhoneNumbers : SweeperAction
+    public class PhoneNumberData : SweeperAction
     {
         private int _stepCount;
 

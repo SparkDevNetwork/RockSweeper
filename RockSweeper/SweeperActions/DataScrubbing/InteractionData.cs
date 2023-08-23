@@ -11,13 +11,13 @@ using RockSweeper.Utility;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Sanitizes the interaction data.
+    /// Attempts to remove all identifying information from all interaction related data.
     /// </summary>
     [ActionId( "31200ef0-cad7-4775-8be8-c1a06a591e3f" )]
-    [Title( "Sanitize Interaction Data" )]
-    [Description( "Removes all custom data from Interactions, InteractionComponents and InteractionChannels." )]
+    [Title( "Interactions" )]
+    [Description( "Attempts to remove all identifying information from all interaction related data." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeInteractionData : SweeperAction
+    public class InteractionData : SweeperAction
     {
         private readonly ConcurrentDictionary<string, string> _ipAddressMap = new ConcurrentDictionary<string, string>( 4, 100_000 );
 

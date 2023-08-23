@@ -13,10 +13,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     /// Sanitizes note content by changing all notes to lorem ipsum text.
     /// </summary>
     [ActionId( "756343a6-3473-4c3b-8ad9-f16ff604ae07" )]
-    [Title( "Sanitize Notes" )]
+    [Title( "Notes" )]
     [Description( "Sanitizes note content by changing all notes to lorem ipsum text." )]
     [Category( "Data Scrubbing" )]
-    public class SanitizeNotes : SweeperAction
+    public class NoteData : SweeperAction
     {
         /// <inheritdoc/>
         public override async Task ExecuteAsync()

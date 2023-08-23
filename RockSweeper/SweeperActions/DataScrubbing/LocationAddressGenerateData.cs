@@ -10,14 +10,14 @@ using RockSweeper.Utility;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Generates random location addresses.
+    /// Generates random addresses in the database, centered around Phoenix, AZ.
     /// </summary>
     [ActionId( "5b110e1e-dde1-49e2-922e-c604083e8679" )]
-    [Title( "Generate Random Location Addresses" )]
+    [Title( "Location Addresses (Generate)" )]
     [Description( "Generates random addresses in the database, centered around Phoenix, AZ." )]
     [Category( "Data Scrubbing" )]
     [RequiresLocationService]
-    public class GenerateRandomLocationAddresses : SweeperAction
+    public class LocationAddressGenerateData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

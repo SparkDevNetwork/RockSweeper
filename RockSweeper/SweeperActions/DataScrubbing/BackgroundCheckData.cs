@@ -6,15 +6,15 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Clears the background check response data.
+    /// Clears as much sensitive information as possible from background checks.
     /// </summary>
     [ActionId( "38c0aa94-f914-470a-9be1-ea3b6da14d41" )]
-    [Title( "Sanitize Background Check Data" )]
-    [Description( "Clears as much sensitive information from background checks as possible." )]
+    [Title( "Background Checks (Sanitize Data)" )]
+    [Description( "Clears as much sensitive information as possible from background checks." )]
     [Category( "Data Scrubbing" )]
-    [AfterAction( typeof( GenerateRandomNames ) )]
-    [ConflictsWithAction( typeof( RemoveBackgroundCheckData ) )]
-    public class SanitizeBackgroundCheckData : SweeperAction
+    [AfterAction( typeof( NameData ) )]
+    [ConflictsWithAction( typeof( BackgroundCheckRemoveData ) )]
+    public class BackgroundCheckData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

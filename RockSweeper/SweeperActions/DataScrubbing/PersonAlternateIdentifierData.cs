@@ -10,14 +10,14 @@ using RockSweeper.Utility;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Sanitizes the interaction data.
+    /// Sanitizes any person alternative identifiers and search keys of identifying information.
     /// </summary>
     [ActionId( "50b87e79-f539-4fa5-b848-1b7a9fd00cc9" )]
-    [Title( "Sanitize Person Alternate Identifiers" )]
+    [Title( "Person Alternate Identifiers" )]
     [Description( "Sanitizes any person alternative identifiers and search keys of identifying information." )]
     [Category( "Data Scrubbing" )]
-    [AfterAction( typeof( GenerateRandomEmailAddresses ) )]
-    public class SanitizePersonAlternateIdentifiers : SweeperAction
+    [AfterAction( typeof( EmailAddressData ) )]
+    public class PersonAlternateIdentifierData : SweeperAction
     {
         /// <inheritdoc/>
         public override async Task ExecuteAsync()
@@ -45,7 +45,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private Task<List<Tuple<int, Dictionary<string, object>>>> ScrubSearchKeys( IEnumerable<SearchKey> searchKeys )
         {
-            var emailHasBeenScrubbed = Sweeper.HasActionExecuted<GenerateRandomEmailAddresses>();
+            var emailHasBeenScrubbed = Sweeper.HasActionExecuted<EmailAddressData>();
             var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var searchKey in searchKeys )

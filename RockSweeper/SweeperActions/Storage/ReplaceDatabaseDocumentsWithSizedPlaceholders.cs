@@ -18,7 +18,7 @@ namespace RockSweeper.SweeperActions.Storage
     [Description( "Replaces any database-stored non-PNG and non-JPG files with placeholder text of the original file size." )]
     [Category( "Storage" )]
     [AfterAction( typeof( MoveBinaryFilesIntoDatabase ) )]
-    [AfterAction( typeof( DataScrubbing.RemoveBackgroundCheckData ) )]
+    [AfterAction( typeof( DataScrubbing.BackgroundCheckRemoveData ) )]
     public class ReplaceDatabaseDocumentsWithSizedPlaceholders : SweeperAction
     {
         public override async Task ExecuteAsync()

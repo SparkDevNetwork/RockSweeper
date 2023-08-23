@@ -9,13 +9,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Generates the random email addresses.
+    /// Replaces any e-mail addresses found in the system with generated values.
     /// </summary>
     [ActionId( "7d14924a-b367-4495-b480-96b86bcf712b" )]
-    [Title( "Generate Random Email Addresses" )]
+    [Title( "Email Addresses" )]
     [Description( "Replaces any e-mail addresses found in the system with generated values." )]
     [Category( "Data Scrubbing" )]
-    public class GenerateRandomEmailAddresses : SweeperAction
+    public class EmailAddressData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

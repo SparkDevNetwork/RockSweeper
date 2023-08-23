@@ -10,13 +10,14 @@ using RockSweeper.Utility;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Shuffles the location addresses.
+    /// Takes the location addresses in the database and shuffles them all around to make it difficult to link a person to an address
     /// </summary>
     [ActionId( "8b164228-50a7-4abe-8769-096ea5157a88" )]
-    [Title( "Shuffle Location Addresses" )]
-    [Description( "Takes the location addresses in the database and shuffles them all around." )]
+    [Title( "Location Addresses (Shuffle)" )]
+    [Description( "Takes the location addresses in the database and shuffles them all around to make it difficult to link a person to an address." )]
     [Category( "Data Scrubbing" )]
-    public class ShuffleLocationAddresses : SweeperAction
+    [ConflictsWithAction( typeof( LocationAddressGenerateData ) )]
+    public class LocationAddressShuffleData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {

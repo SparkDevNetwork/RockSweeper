@@ -9,13 +9,13 @@ using RockSweeper.Attributes;
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
     /// <summary>
-    /// Generates the random names.
+    /// Replaces any person names with randomized names.
     /// </summary>
     [ActionId( "d000b0a2-c318-4d72-93df-ed60dd3a015c" )]
-    [Title( "Generate Random Names" )]
+    [Title( "Names" )]
     [Description( "Replaces any person names with randomized names." )]
     [Category( "Data Scrubbing" )]
-    public class GenerateRandomNames : SweeperAction
+    public class NameData : SweeperAction
     {
         public override async Task ExecuteAsync()
         {
