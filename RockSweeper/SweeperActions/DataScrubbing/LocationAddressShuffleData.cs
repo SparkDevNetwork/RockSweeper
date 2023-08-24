@@ -27,25 +27,25 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Step 1: Shuffle all locations that are not geo-coded.
             //
-            var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
-            idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
-            for ( int i = 0; i < locations.Count; i++ )
-            {
-                var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
-                idNumbers.Remove( locationId );
+            //var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
+            //idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
+            //for ( int i = 0; i < locations.Count; i++ )
+            //{
+            //    var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
+            //    idNumbers.Remove( locationId );
 
-                locations[i].Remove( "Id" );
+            //    locations[i].Remove( "Id" );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, locations[i] );
+            //    await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, locations[i] );
 
-                Progress( i / ( double ) locations.Count, 1, stepCount );
-            }
+            //    Progress( i / ( double ) locations.Count, 1, stepCount );
+            //}
 
             //
             // Step 2: Shuffle all locations with a valid GeoPoint inside our radius.
             //
             double radiusDistance = 35 * 1609.344;
-            var centerLocationGuid = Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
+            var centerLocationGuid = await Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
             var centerLocationValues = await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" );
             var centerLocation = centerLocationValues.Any()
                 ? new Coordinates( ( await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ) ).First() )

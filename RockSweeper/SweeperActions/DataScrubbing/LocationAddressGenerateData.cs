@@ -43,7 +43,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             }
 
             double radiusDistance = 35 * 1609.344;
-            var centerLocationGuid = Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
+            var centerLocationGuid = await Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
             var centerLocation = new Coordinates( ( await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ) ).First() );
             var targetCenterLocation = new Coordinates( Properties.Settings.Default.TargetGeoCenter );
             var adjustCoordinates = new Coordinates( targetCenterLocation.Latitude - centerLocation.Latitude, targetCenterLocation.Longitude - centerLocation.Longitude );

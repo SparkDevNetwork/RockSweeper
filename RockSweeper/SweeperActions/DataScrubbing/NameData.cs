@@ -69,21 +69,27 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
 
                     if ( recordType == businessGuid )
                     {
-                        if ( !lastNameLookup.ContainsKey( lastName ) )
+                        if ( !string.IsNullOrWhiteSpace( lastName ) )
                         {
-                            lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() + " " + Sweeper.DataFaker.Name.LastName() + " LLC" );
-                        }
+                            if ( !lastNameLookup.ContainsKey( lastName ) )
+                            {
+                                lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() + " " + Sweeper.DataFaker.Name.LastName() + " LLC" );
+                            }
 
-                        changes.Add( "LastName", lastNameLookup[lastName] );
+                            changes.Add( "LastName", lastNameLookup[lastName] );
+                        }
                     }
                     else
                     {
-                        if ( !lastNameLookup.ContainsKey( lastName ) )
+                        if ( !string.IsNullOrWhiteSpace( lastName ) )
                         {
-                            lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() );
-                        }
+                            if ( !lastNameLookup.ContainsKey( lastName ) )
+                            {
+                                lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() );
+                            }
 
-                        changes.Add( "LastName", lastNameLookup[lastName] );
+                            changes.Add( "LastName", lastNameLookup[lastName] );
+                        }
 
                         if ( !string.IsNullOrWhiteSpace( firstName ) )
                         {
@@ -134,7 +140,7 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
                     //
                     // Update family name.
                     //
-                    if ( !processedFamilyIds.Contains( familyId ) && familyName.StartsWith( lastName ) )
+                    if ( !processedFamilyIds.Contains( familyId ) && !string.IsNullOrWhiteSpace( lastName ) && familyName.StartsWith( lastName ) )
                     {
                         processedFamilyIds.Add( familyId );
 
@@ -162,7 +168,7 @@ WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
             var queryData = await Sweeper.SqlQueryAsync( @"SELECT
 BR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [BenevolenceRequest] AS BR
-LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = BR.[RequestedByPersonAliasId]
+LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = BR.[RequestedByPersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
 
             for ( int i = 0; i < queryData.Count; i++ )
@@ -198,7 +204,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
             queryData = await Sweeper.SqlQueryAsync( @"SELECT
 PR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [PrayerRequest] AS PR
-LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = PR.[RequestedByPersonAliasId]
+LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = PR.[RequestedByPersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
 
             for ( int i = 0; i < queryData.Count; i++ )
@@ -234,7 +240,7 @@ LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
             queryData = await Sweeper.SqlQueryAsync( @"SELECT
 R.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [Registration] AS R
-LEFT JOIN [PersonAlias] AS PA ON PA.[Id] = R.[PersonAliasId]
+LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = R.[PersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
 
             for ( int i = 0; i < queryData.Count; i++ )

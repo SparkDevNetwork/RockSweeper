@@ -128,10 +128,11 @@ namespace RockSweeper.Dialogs
 
         private void Sweeper_OperationStarted( object sender, ProgressEventArgs e )
         {
+            _lineStopwatch.Restart();
+            _lineQueryStartCount = ( ( SweeperController ) sender ).SqlQueryCount;
+
             Dispatcher.InvokeAsync( () =>
             {
-                _lineStopwatch.Restart();
-                _lineQueryStartCount = ( ( SweeperController ) sender ).SqlQueryCount;
                 _currentOperationId = e.OperationId;
 
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
@@ -165,6 +166,9 @@ namespace RockSweeper.Dialogs
 
         private void Sweeper_OperationCompleted( object sender, ProgressEventArgs e )
         {
+            var duration = _lineStopwatch.Elapsed.ToString( "hh\\:mm\\:ss" );
+            var tooltip = $"Completed\nQuery Count: {( ( ( SweeperController ) sender ).SqlQueryCount - _lineQueryStartCount ):N0}";
+
             Dispatcher.InvokeAsync( () =>
             {
                 var progressLine = _viewModel.ProgressLines.Single( p => p.OptionId == e.OperationId );
@@ -172,8 +176,8 @@ namespace RockSweeper.Dialogs
                 progressLine.Progress = null;
                 progressLine.State = ProgressLineState.Completed;
                 progressLine.Message = string.Empty;
-                progressLine.Duration = _lineStopwatch.Elapsed.ToString( "hh\\:mm\\:ss" );
-                progressLine.Tooltip = $"Completed\nQuery Count: {(( ( SweeperController ) sender ).SqlQueryCount - _lineQueryStartCount):N0}";
+                progressLine.Duration = duration;
+                progressLine.Tooltip = tooltip;
 
                 var index = _viewModel.ProgressLines.IndexOf( progressLine );
 
