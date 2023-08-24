@@ -80,7 +80,7 @@
                     <fa:ImageAwesome Icon="Pencil" Width="12" />
                 </Button>
             </Grid>
-            
+
             <Button Grid.RowSpan="2"
                     Grid.Column="2"
                     Background="Transparent"
@@ -106,7 +106,7 @@
 
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock Text="" />
+                <TextBlock Text="{Binding SweeperVersion}" Margin="8, 0, 0, 0" />
             </StatusBarItem>
         </StatusBar>
 

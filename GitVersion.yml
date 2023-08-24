@@ -1,0 +1,9 @@
+assembly-versioning-scheme: MajorMinorPatch
+mode: ContinuousDeployment
+branches:
+  main:
+    tag: 'beta'
+ignore:
+  sha: []
+merge-message-formats: {}
+next-version: 2.0.0

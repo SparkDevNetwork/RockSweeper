@@ -49,6 +49,11 @@ namespace RockSweeper
         protected string ConnectionString { get; set; }
 
         /// <summary>
+        /// The version of the application.
+        /// </summary>
+        public string SweeperVersion { get; private set; }
+
+        /// <summary>
         /// Gets the name of the SQL database.
         /// </summary>
         /// <value>
@@ -102,6 +107,7 @@ namespace RockSweeper
         /// </summary>
         public MainWindow()
         {
+            SetVersion();
             InitializeComponent();
 
             // Initialize all the possible operations.
@@ -142,6 +148,27 @@ namespace RockSweeper
         #endregion
 
         #region Methods
+
+        private void SetVersion()
+        {
+            var gitVersionInformationType = GetType().Assembly.GetType( "GitVersionInformation" );
+            var fullSemVer = gitVersionInformationType.GetField( "FullSemVer", BindingFlags.Static | BindingFlags.Public ).GetValue( null ).ToString();
+            var shaField = gitVersionInformationType.GetField( "ShortSha", BindingFlags.Static | BindingFlags.Public ).GetValue( null ).ToString(); ;
+            var uncommittedChanges = gitVersionInformationType.GetField( "UncommittedChanges", BindingFlags.Static | BindingFlags.Public ).GetValue( null ).ToString(); ;
+
+            var version = fullSemVer;
+
+            if ( uncommittedChanges != "0" )
+            {
+                version += $" ({shaField}+{uncommittedChanges})";
+            }
+            else
+            {
+                version += $" ({shaField})";
+            }
+
+            SweeperVersion = $"Version: {version}";
+        }
 
         /// <summary>
         /// Notifies the property changed.

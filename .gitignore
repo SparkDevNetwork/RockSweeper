@@ -39,3 +39,4 @@ Thumbs.db
 
 # dotCover
 *.dotCover
+/RockSweeper/gitversion.json
