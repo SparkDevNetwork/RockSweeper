@@ -227,6 +227,7 @@
     <Compile Include="Utility\ProgressLine.cs" />
     <Compile Include="Utility\CountProgressReporter.cs" />
     <Compile Include="Utility\SavedSweeperConfiguration.cs" />
+    <Compile Include="Utility\SleepHelper.cs" />
     <Compile Include="Utility\Support.cs" />
     <Compile Include="SweeperController.cs" />
     <Compile Include="Utility\SweeperConfiguration.cs" />

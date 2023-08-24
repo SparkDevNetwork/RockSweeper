@@ -445,26 +445,35 @@ namespace RockSweeper
         /// </summary>
         public async Task ExecuteAsync( IList<SweeperOption> options )
         {
-            await StashOriginalPersonNamesAsync();
+            SleepHelper.PreventSleep();
 
-            for ( int i = 0; i < options.Count; i++ )
+            try
             {
-                var option = options[i];
+                await StashOriginalPersonNamesAsync();
 
-                OperationStarted?.Invoke( this, new ProgressEventArgs( option.Id, null, "Running" ) );
-
-                using ( var action = ( SweeperAction ) Activator.CreateInstance( option.ActionType ) )
+                for ( int i = 0; i < options.Count; i++ )
                 {
-                    action.Sweeper = this;
+                    var option = options[i];
 
-                    await action.ExecuteAsync();
+                    OperationStarted?.Invoke( this, new ProgressEventArgs( option.Id, null, "Running" ) );
+
+                    using ( var action = ( SweeperAction ) Activator.CreateInstance( option.ActionType ) )
+                    {
+                        action.Sweeper = this;
+
+                        await action.ExecuteAsync();
+                    }
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                    OperationCompleted?.Invoke( this, new ProgressEventArgs( option.Id, null, null ) );
+
+                    _executeActionTypes.Add( option.ActionType );
                 }
-
-                CancellationToken.ThrowIfCancellationRequested();
-
-                OperationCompleted?.Invoke( this, new ProgressEventArgs( option.Id, null, null ) );
-
-                _executeActionTypes.Add( option.ActionType );
+            }
+            finally
+            {
+                SleepHelper.AllowSleep();
             }
         }
 
