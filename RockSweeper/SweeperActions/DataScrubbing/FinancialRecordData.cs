@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
@@ -318,6 +320,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         #endregion
 
+        private readonly ConcurrentDictionary<string, string> _gatewayPersonIdentifierMap = new ConcurrentDictionary<string, string>();
+
+        private readonly ConcurrentDictionary<string, string> _scheduleIdentifierMap = new ConcurrentDictionary<string, string>();
+
         private int _stepCount;
 
         /// <inheritdoc/>
@@ -326,24 +332,24 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             _stepCount = 11;
             var step = 1;
 
-            await SanitizeFinancialAccountsAsync( step++ );
-            await SanitizeFinancialBatchesAsync( step++ );
-            await SanitizeFinancialPaymentDetailsAsync( step++ );
-            await SanitizeFinancialPersonBankAccountsAsync( step++ );
-            await SanitizeFinancialPersonSavedAccountsAsync( step++ );
-            await SanitizeFinancialScheduledTransactionsAsync( step++ );
-            await SanitizeFinancialScheduledTransactionDetailsAsync( step++ );
-            await SanitizeFinancialStatementTemplatesAsync( step++ );
-            await SanitizeFinancialTransactionsAsync( step++ );
-            await SanitizeFinancialTransactionDetailsAsync( step++ );
-            await SanitizeFinancialTransactionRefundsAsync( step++ );
+            await ProcessFinancialAccountsAsync( step++ );
+            await ProcessFinancialBatchesAsync( step++ );
+            await ProcessFinancialPaymentDetailsAsync( step++ );
+            await ProcessFinancialPersonBankAccountsAsync( step++ );
+            await ProcessFinancialPersonSavedAccountsAsync( step++ );
+            await ProcessFinancialScheduledTransactionsAsync( step++ );
+            await ProcessFinancialScheduledTransactionDetailsAsync( step++ );
+            await ProcessFinancialStatementTemplatesAsync( step++ );
+            await ProcessFinancialTransactionsAsync( step++ );
+            await ProcessFinancialTransactionDetailsAsync( step++ );
+            await ProcessFinancialTransactionRefundsAsync( step++ );
         }
 
         /// <summary>
         /// Sanitize the FinancialAccount table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialAccountsAsync( int step )
+        private async Task ProcessFinancialAccountsAsync( int step )
         {
             var accounts = await Sweeper.SqlQueryAsync( "SELECT [Id], [Description], [Url], [PublicDescription] FROM [FinancialAccount]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
@@ -386,9 +392,34 @@ namespace RockSweeper.SweeperActions.DataScrubbing
         /// Sanitize the FinancialBatch table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialBatchesAsync( int step )
+        private async Task ProcessFinancialBatchesAsync( int step )
         {
-            var batches = await Sweeper.SqlQueryAsync( "SELECT [Id], [Note] FROM [FinancialBatch]" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialBatch] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialBatchesAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialBatch", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialBatchesAsync( List<int> ids )
+        {
+            var batches = await Sweeper.SqlQueryAsync( $"SELECT [Id], [Note] FROM [FinancialBatch] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var batch in batches )
@@ -408,18 +439,41 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialBatch", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialPaymentDetail table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialPaymentDetailsAsync( int step )
+        private async Task ProcessFinancialPaymentDetailsAsync( int step )
         {
-            var details = await Sweeper.SqlQueryAsync( "SELECT [Id], [AccountNumberMasked], [NameOnCard] FROM [FinancialPaymentDetail]" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialPaymentDetail] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialPaymentDetailsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPaymentDetail", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialPaymentDetailsAsync( List<int> ids )
+        {
+            var details = await Sweeper.SqlQueryAsync( $"SELECT [Id], [AccountNumberMasked], [NameOnCard] FROM [FinancialPaymentDetail] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var detail in details )
@@ -445,18 +499,41 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPaymentDetail", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialPersonBankAccount table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialPersonBankAccountsAsync( int step )
+        private async Task ProcessFinancialPersonBankAccountsAsync( int step )
         {
-            var accounts = await Sweeper.SqlQueryAsync( "SELECT [Id], [AccountNumberMasked] FROM [FinancialPersonBankAccount]" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialPersonBankAccount] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialPersonBankAccountsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonBankAccount", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialPersonBankAccountsAsync( List<int> ids )
+        {
+            var accounts = await Sweeper.SqlQueryAsync( $"SELECT [Id], [AccountNumberMasked] FROM [FinancialPersonBankAccount] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var account in accounts )
@@ -476,23 +553,41 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonBankAccount", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialPersonSavedAccount table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialPersonSavedAccountsAsync( int step )
+        private async Task ProcessFinancialPersonSavedAccountsAsync( int step )
         {
-            var accounts = await Sweeper.SqlQueryAsync( "SELECT [Id], [ReferenceNumber], [Name], [TransactionCode], [GatewayPersonIdentifier] FROM [FinancialPersonSavedAccount]" );
-            var gatewayPersonIdentifierMap = accounts
-                .Select( a => ( string ) a["GatewayPersonIdentifier"] )
-                .Where( a => !string.IsNullOrWhiteSpace( a ) )
-                .Distinct()
-                .ToDictionary( id => id, id => id.RandomizeLettersAndNumbers() );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialPersonSavedAccount] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialPersonSavedAccountsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonSavedAccount", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialPersonSavedAccountsAsync( List<int> ids )
+        {
+            var accounts = await Sweeper.SqlQueryAsync( $"SELECT [Id], [ReferenceNumber], [Name], [TransactionCode], [GatewayPersonIdentifier] FROM [FinancialPersonSavedAccount] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var account in accounts )
@@ -521,7 +616,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( !string.IsNullOrWhiteSpace( gatewayPersonIdentifier ) )
                 {
-                    changes["GatewayPersonIdentifier"] = gatewayPersonIdentifierMap[gatewayPersonIdentifier];
+                    changes["GatewayPersonIdentifier"] = _gatewayPersonIdentifierMap.GetOrAdd( gatewayPersonIdentifier, gpid => gpid.RandomizeLettersAndNumbers() );
                 }
 
                 if ( changes.Any() )
@@ -530,36 +625,43 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialPersonSavedAccount", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialScheduledTransactions table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialScheduledTransactionsAsync( int step )
+        private async Task ProcessFinancialScheduledTransactionsAsync( int step )
         {
-            var scheduledTransactions = await Sweeper.SqlQueryAsync( "SELECT [Id], [TransactionCode], [GatewayScheduleId], [Summary], [PreviousGatewayScheduleIdsJson] FROM [FinancialScheduledTransaction]" );
-            var scheduleIdMap = new Dictionary<string, string>();
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialScheduledTransaction] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialScheduledTransactionsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialScheduledTransaction", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialScheduledTransactionsAsync( List<int> ids )
+        {
+            var scheduledTransactions = await Sweeper.SqlQueryAsync( $"SELECT [Id], [TransactionCode], [GatewayScheduleId], [Summary], [PreviousGatewayScheduleIdsJson] FROM [FinancialScheduledTransaction] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-            // Loop over all the records once to create the schedule id map.
-            foreach ( var scheduledTransaction in scheduledTransactions )
-            {
-                var gatewayScheduleId = ( string ) scheduledTransaction["GatewayScheduleId"];
-
-                if ( !string.IsNullOrWhiteSpace( gatewayScheduleId ) )
-                {
-                    if ( !scheduleIdMap.ContainsKey( gatewayScheduleId ) )
-                    {
-                        scheduleIdMap.Add( gatewayScheduleId, gatewayScheduleId.RandomizeLettersAndNumbers() );
-                    }
-                }
-            }
-
-            // Loop over a second time to do the actual updates.
             foreach ( var scheduledTransaction in scheduledTransactions )
             {
                 var id = ( int ) scheduledTransaction["Id"];
@@ -576,7 +678,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                 if ( !string.IsNullOrWhiteSpace( gatewayScheduleId ) )
                 {
-                    changes["GatewayScheduleId"] = scheduleIdMap[gatewayScheduleId];
+                    changes["GatewayScheduleId"] = _scheduleIdentifierMap.GetOrAdd( gatewayScheduleId, sid => sid.RandomizeLettersAndNumbers() );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( summary ) )
@@ -589,7 +691,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     try
                     {
                         var previousScheduleIds = JsonConvert.DeserializeObject<List<string>>( previousGatewayScheduleIdsJson )
-                            .Select( s => scheduleIdMap.TryGetValue( s, out var scrubId ) ? scrubId : "HIDDEN" )
+                            .Select( s => _scheduleIdentifierMap.GetOrAdd( s, sid => sid.RandomizeLettersAndNumbers() ) )
                             .ToList();
 
                         changes["PreviousGatewayScheduleIdsJson"] = JsonConvert.SerializeObject( previousScheduleIds );
@@ -606,18 +708,41 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialScheduledTransaction", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialScheduledTransactionDetail table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialScheduledTransactionDetailsAsync( int step )
+        private async Task ProcessFinancialScheduledTransactionDetailsAsync( int step )
         {
-            var details = await Sweeper.SqlQueryAsync( "SELECT [Id], [Summary] FROM [FinancialScheduledTransactionDetail] WHERE ISNULL([Summary], '') != ''" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialScheduledTransactionDetail] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialScheduledTransactionDetailsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialScheduledTransactionDetail", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialScheduledTransactionDetailsAsync( List<int> ids )
+        {
+            var details = await Sweeper.SqlQueryAsync( $"SELECT [Id], [Summary] FROM [FinancialScheduledTransactionDetail] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var detail in details )
@@ -637,16 +762,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialScheduledTransactionDetail", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialStatementTemplate table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialStatementTemplatesAsync( int step )
+        private async Task ProcessFinancialStatementTemplatesAsync( int step )
         {
             var parameters = new Dictionary<string, object>
             {
@@ -667,9 +790,34 @@ SET [ReportTemplate] = @ReportTemplate
         /// Sanitize the FinancialTransaction table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialTransactionsAsync( int step )
+        private async Task ProcessFinancialTransactionsAsync( int step )
         {
-            var accounts = await Sweeper.SqlQueryAsync( "SELECT [Id], [TransactionCode], [Summary] FROM [FinancialTransaction]" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialTransaction] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialTransactionsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransaction", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialTransactionsAsync( List<int> ids )
+        {
+            var accounts = await Sweeper.SqlQueryAsync( $"SELECT [Id], [TransactionCode], [Summary] FROM [FinancialTransaction] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var account in accounts )
@@ -695,18 +843,41 @@ SET [ReportTemplate] = @ReportTemplate
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransaction", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialTransactionDetail table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialTransactionDetailsAsync( int step )
+        private async Task ProcessFinancialTransactionDetailsAsync( int step )
         {
-            var details = await Sweeper.SqlQueryAsync( "SELECT [Id], [Summary] FROM [FinancialTransactionDetail] WHERE ISNULL([Summary], '') != ''" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialTransactionDetail] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialTransactionDetailsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransactionDetail", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialTransactionDetailsAsync( List<int> ids )
+        {
+            var details = await Sweeper.SqlQueryAsync( $"SELECT [Id], [Summary] FROM [FinancialTransactionDetail] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var detail in details )
@@ -726,18 +897,41 @@ SET [ReportTemplate] = @ReportTemplate
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransactionDetail", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
 
         /// <summary>
         /// Sanitize the FinancialTransactionRefund table.
         /// </summary>
         /// <returns>A task that represents the operation.</returns>
-        private async Task SanitizeFinancialTransactionRefundsAsync( int step )
+        private async Task ProcessFinancialTransactionRefundsAsync( int step )
         {
-            var details = await Sweeper.SqlQueryAsync( "SELECT [Id], [RefundReasonSummary] FROM [FinancialTransactionRefund] WHERE ISNULL([RefundReasonSummary], '') != ''" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [FinancialTransactionRefund] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p, step, _stepCount ) );
+
+            await AsyncProducer.FromItems( ids.Chunk( 2_500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubFinancialTransactionRefundsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransactionRefund", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubFinancialTransactionRefundsAsync( List<int> ids )
+        {
+            var details = await Sweeper.SqlQueryAsync( $"SELECT [Id], [RefundReasonSummary] FROM [FinancialTransactionRefund] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" );
             var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
             foreach ( var detail in details )
@@ -757,9 +951,7 @@ SET [ReportTemplate] = @ReportTemplate
                 }
             }
 
-            await Sweeper.UpdateDatabaseRecordsAsync( "FinancialTransactionRefund", bulkChanges, p => Progress( p, step, _stepCount ) );
-
-            Progress( 1, step, _stepCount );
+            return bulkChanges;
         }
     }
 }

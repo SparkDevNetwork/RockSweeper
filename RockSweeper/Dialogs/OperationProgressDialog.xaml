@@ -68,7 +68,7 @@
                 <DataGridTemplateColumn Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Path=Title}" ToolTip="{Binding Path=Tooltip}" />
+                            <TextBlock Text="{Binding Path=Title}" ToolTip="{Binding Path=Tooltip}" Margin="4, 0, 0, 0" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

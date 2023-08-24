@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,28 +23,10 @@ namespace RockSweeper.SweeperActions.DataScrubbing
         public override async Task ExecuteAsync()
         {
             List<int> idNumbers;
+            CountProgressReporter reporter;
             int stepCount = 3;
 
-            //
-            // Step 1: Shuffle all locations that are not geo-coded.
-            //
-            //var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
-            //idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
-            //for ( int i = 0; i < locations.Count; i++ )
-            //{
-            //    var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
-            //    idNumbers.Remove( locationId );
-
-            //    locations[i].Remove( "Id" );
-
-            //    await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, locations[i] );
-
-            //    Progress( i / ( double ) locations.Count, 1, stepCount );
-            //}
-
-            //
-            // Step 2: Shuffle all locations with a valid GeoPoint inside our radius.
-            //
+            // Find the center location.
             double radiusDistance = 35 * 1609.344;
             var centerLocationGuid = await Sweeper.GetGlobalAttributeValueAsync( "OrganizationAddress" );
             var centerLocationValues = await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" );
@@ -51,24 +34,61 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                 ? new Coordinates( ( await Sweeper.SqlQueryAsync<double, double>( $"SELECT [GeoPoint].Lat, [GeoPoint].Long FROM [Location] WHERE [Guid] = '{centerLocationGuid}'" ) ).First() )
                 : null;
 
+            //
+            // Step 1: Shuffle all locations that are not geo-coded.
+            //
+            var locations = await Sweeper.SqlQueryAsync( "SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode] FROM [Location] WHERE ISNULL([Street1], '') != '' AND ISNULL([City], '') != '' AND [GeoPoint] IS NULL" );
+            idNumbers = locations.Select( l => ( int ) l["Id"] ).ToList();
+            reporter = new CountProgressReporter( locations.Count, p => Progress( p, 1, stepCount ) );
+
+            foreach ( var chunk in locations.Chunk( 500 ).Select( c => c.ToList() ) )
+            {
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
+
+                foreach ( var location in chunk )
+                {
+                    var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
+                    idNumbers.Remove( locationId );
+
+                    location.Remove( "Id" );
+
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( locationId, location ) );
+                }
+
+                await Sweeper.UpdateDatabaseRecordsAsync( "Location", bulkChanges );
+
+                reporter.Add( chunk.Count );
+            }
+
+            //
+            // Step 2: Shuffle all locations with a valid GeoPoint inside our radius.
+            //
             var geoLocations = centerLocation != null
                 ? await Sweeper.SqlQueryAsync( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) < {radiusDistance}" )
                 : new List<Dictionary<string, object>>();
-
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
-            for ( int i = 0; i < geoLocations.Count; i++ )
+            reporter = new CountProgressReporter( geoLocations.Count, p => Progress( p, 2, stepCount ) );
+
+            foreach ( var chunk in geoLocations.Chunk( 500 ).Select( c => c.ToList() ) )
             {
-                var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
-                idNumbers.Remove( locationId );
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                geoLocations[i].Remove( "Id" );
-                geoLocations[i].Add( "GeoPoint", new Coordinates( ( double ) geoLocations[i]["Lat"], ( double ) geoLocations[i]["Long"] ) );
-                geoLocations[i].Remove( "Lat" );
-                geoLocations[i].Remove( "Long" );
+                foreach ( var location in chunk )
+                {
+                    var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
+                    idNumbers.Remove( locationId );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, geoLocations[i] );
+                    location.Remove( "Id" );
+                    location.Add( "GeoPoint", new Coordinates( ( double ) location["Lat"], ( double ) location["Long"] ) );
+                    location.Remove( "Lat" );
+                    location.Remove( "Long" );
 
-                Progress( i / ( double ) geoLocations.Count, 2, stepCount );
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( locationId, location ) );
+                }
+
+                await Sweeper.UpdateDatabaseRecordsAsync( "Location", bulkChanges );
+
+                reporter.Add( chunk.Count );
             }
 
             //
@@ -77,21 +97,29 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             geoLocations = centerLocation != null
                 ? await Sweeper.SqlQueryAsync( $"SELECT [Id], [Street1], [Street2], [City], [State], [Country], [PostalCode], [GeoPoint].Lat AS [Lat], [GeoPoint].Long AS [Long] FROM [Location] WHERE [GeoPoint] IS NOT NULL AND geography::Point({centerLocation.Latitude}, {centerLocation.Longitude}, 4326).STDistance([GeoPoint]) >= {radiusDistance}" )
                 : new List<Dictionary<string, object>>();
-
             idNumbers = geoLocations.Select( l => ( int ) l["Id"] ).ToList();
-            for ( int i = 0; i < geoLocations.Count; i++ )
+            reporter = new CountProgressReporter( geoLocations.Count, p => Progress( p, 3, stepCount ) );
+
+            foreach ( var chunk in geoLocations.Chunk( 500 ).Select( c => c.ToList() ) )
             {
-                var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
-                idNumbers.Remove( locationId );
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                geoLocations[i].Remove( "Id" );
-                geoLocations[i].Add( "GeoPoint", new Coordinates( ( double ) geoLocations[i]["Lat"], ( double ) geoLocations[i]["Long"] ) );
-                geoLocations[i].Remove( "Lat" );
-                geoLocations[i].Remove( "Long" );
+                foreach ( var location in chunk )
+                {
+                    var locationId = Sweeper.DataFaker.PickRandom( idNumbers );
+                    idNumbers.Remove( locationId );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "Location", locationId, geoLocations[i] );
+                    location.Remove( "Id" );
+                    location.Add( "GeoPoint", new Coordinates( ( double ) location["Lat"], ( double ) location["Long"] ) );
+                    location.Remove( "Lat" );
+                    location.Remove( "Long" );
 
-                Progress( i / ( double ) geoLocations.Count, 3, stepCount );
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( locationId, location ) );
+                }
+
+                await Sweeper.UpdateDatabaseRecordsAsync( "Location", bulkChanges );
+
+                reporter.Add( chunk.Count );
             }
         }
     }

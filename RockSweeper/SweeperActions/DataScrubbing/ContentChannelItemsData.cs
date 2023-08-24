@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
@@ -18,24 +20,57 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     {
         public override async Task ExecuteAsync()
         {
-            var contentChannelItems = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id], [Content] FROM [ContentChannelItem]" );
+            var ids = await Sweeper.SqlQueryAsync<int>( "SELECT [Id] FROM [ContentChannelItem] ORDER BY [Id]" );
+            var reporter = new CountProgressReporter( ids.Count, p => Progress( p ) );
 
-            for ( int i = 0; i < contentChannelItems.Count; i++ )
+            await AsyncProducer.FromItems( ids.Chunk( 500 ).Select( c => c.ToList() ) )
+                .Pipe( async items =>
+                {
+                    var result = await ScrubContentChannelItemsAsync( items );
+
+                    reporter.Add( items.Count - result.Count );
+
+                    return result;
+                } )
+                .Consume( async changes =>
+                {
+                    if ( changes.Any() )
+                    {
+                        await Sweeper.UpdateDatabaseRecordsAsync( "ContentChannelItem", changes );
+                        reporter.Add( changes.Count );
+                    }
+                } )
+                .RunAsync( Sweeper.CancellationToken );
+        }
+
+        private async Task<List<Tuple<int, Dictionary<string, object>>>> ScrubContentChannelItemsAsync( List<int> ids )
+        {
+            var items = ( await Sweeper.SqlQueryAsync( $"SELECT [Id], [Content] FROM [ContentChannelItem] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", ids )}) ORDER BY [Id]" ) ).ToObjects<ContentChannelItem>();
+            var bulkUpdates = new List<Tuple<int, Dictionary<string, object>>>();
+
+            foreach ( var item in items )
             {
                 var changes = new Dictionary<string, object>();
 
-                if ( !string.IsNullOrWhiteSpace( contentChannelItems[i].Item2 ) )
+                if ( !string.IsNullOrWhiteSpace( item.Content ) )
                 {
-                    changes.Add( "Content", Sweeper.DataFaker.Lorem.ReplaceNonHtmlWords( contentChannelItems[i].Item2 ) );
+                    changes["Content"] = Sweeper.DataFaker.Lorem.ReplaceNonHtmlWords( item.Content );
                 }
 
                 if ( changes.Any() )
                 {
-                    await Sweeper.UpdateDatabaseRecordAsync( "ContentChannelItem", contentChannelItems[i].Item1, changes );
+                    bulkUpdates.Add( new Tuple<int, Dictionary<string, object>>( item.Id, changes ) );
                 }
-
-                Progress( i / ( double ) contentChannelItems.Count );
             }
+
+            return bulkUpdates;
+        }
+
+        private class ContentChannelItem
+        {
+            public int Id { get; set; }
+
+            public string Content { get; set; }
         }
     }
 }

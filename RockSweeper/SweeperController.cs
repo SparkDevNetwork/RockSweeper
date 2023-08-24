@@ -1291,7 +1291,18 @@ namespace RockSweeper
 
                     if ( r.Item2[k] != null )
                     {
-                        dt.Columns.Add( k, r.Item2[k].GetType() );
+                        if ( r.Item2[k] is Coordinates )
+                        {
+                            if ( !dt.Columns.Contains( $"{k}Latitude" ) )
+                            {
+                                dt.Columns.Add( $"{k}Latitude", typeof( double ) );
+                                dt.Columns.Add( $"{k}Longitude", typeof( double ) );
+                            }
+                        }
+                        else
+                        {
+                            dt.Columns.Add( k, r.Item2[k].GetType() );
+                        }
                     }
                 }
             }
@@ -1307,7 +1318,15 @@ namespace RockSweeper
                 {
                     if ( dt.Columns.Contains( k ) )
                     {
-                        dr[k] = r.Item2[k];
+                        if ( r.Item2[k] is Coordinates coordinates )
+                        {
+                            dr[$"{k}Latitude"] = coordinates.Latitude;
+                            dr[$"{k}Longitude"] = coordinates.Longitude;
+                        }
+                        else
+                        {
+                            dr[k] = r.Item2[k];
+                        }
                     }
                 }
                 dt.Rows.Add( dr );
@@ -1333,6 +1352,10 @@ namespace RockSweeper
                         {
                             columns.Add( $"[{c.ColumnName}] [int] NULL" );
                         }
+                        else if ( c.DataType == typeof( double ) && ( c.ColumnName.EndsWith( "Latitude" ) || c.ColumnName.EndsWith( "Longitude" ) ) )
+                        {
+                            columns.Add( $"[{c.ColumnName}] [decimal](18, 2) NULL" );
+                        }
                         else
                         {
                             throw new Exception( $"Unknown column type '{c.DataType.FullName}' in bulk update." );
@@ -1340,7 +1363,27 @@ namespace RockSweeper
 
                         if ( c.ColumnName != "Id" )
                         {
-                            setColumns.Add( $"T.[{c.ColumnName}] = ISNULL(U.[{c.ColumnName}], T.[{c.ColumnName}])" );
+                            if ( c.DataType == typeof( double ) )
+                            {
+                                if ( c.ColumnName.EndsWith( "Latitude" ) )
+                                {
+                                    var columnName = c.ColumnName.Replace( "Latitude", string.Empty );
+
+                                    setColumns.Add( $"T.[{columnName}] = CASE WHEN U.[{columnName}Latitude] IS NOT NULL AND U.[{columnName}Longitude] IS NOT NULL THEN geography::Point(U.[{columnName}Latitude], U.[{columnName}Longitude], 4326) ELSE T.[{columnName}] END" );
+                                }
+                                else if ( c.ColumnName.EndsWith( "Longitude" ) )
+                                {
+                                    // Do nothing, handled above.
+                                }
+                                else
+                                {
+                                    throw new Exception( "Don't know how to handle generic double column." );
+                                }
+                            }
+                            else
+                            {
+                                setColumns.Add( $"T.[{c.ColumnName}] = ISNULL(U.[{c.ColumnName}], T.[{c.ColumnName}])" );
+                            }
                         }
                     }
 
@@ -1752,14 +1795,15 @@ ELSE
 
             CancellationToken.ThrowIfCancellationRequested();
 
-            await ProcessItemsInParallelAsync( rowIds, 1000, async ( itemIds ) =>
+            await ProcessItemsInParallelAsync( rowIds, 1_000, async ( itemIds ) =>
             {
                 var rows = await SqlQueryAsync( $"SELECT [Id], [{columns}] FROM [{tableName}] WITH (NOLOCK) WHERE [Id] IN ({string.Join( ",", itemIds )})" );
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
                 for ( int i = 0; i < rows.Count; i++ )
                 {
                     int valueId = ( int ) rows[i]["Id"];
-                    var updatedValues = new Dictionary<string, object>();
+                    var changes = new Dictionary<string, object>();
 
                     foreach ( var c in columnNames )
                     {
@@ -1771,16 +1815,18 @@ ELSE
 
                             if ( value != newValue )
                             {
-                                updatedValues.Add( c, newValue );
+                                changes.Add( c, newValue );
                             }
                         }
                     }
 
-                    if ( updatedValues.Any() )
+                    if ( changes.Any() )
                     {
-                        await UpdateDatabaseRecordAsync( tableName, valueId, updatedValues );
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( valueId, changes ) );
                     }
                 }
+
+                await UpdateDatabaseRecordsAsync( tableName, bulkChanges );
             }, ( p ) =>
             {
                 progress?.Invoke( p );

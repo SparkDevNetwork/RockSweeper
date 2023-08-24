@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using RockSweeper.Attributes;
+using RockSweeper.Utility;
 
 namespace RockSweeper.SweeperActions.DataScrubbing
 {
@@ -23,6 +24,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             var processedFamilyIds = new List<int>();
             var businessGuid = new Guid( "BF64ADD3-E70A-44CE-9C4B-E76BBED37550" );
             int stepCount = 6 + Sweeper.ScrubNameTables.Count - 1;
+            CountProgressReporter reporter;
 
             //
             // Stage 1: Update Person table
@@ -36,130 +38,138 @@ INNER JOIN [GroupType] AS GT ON GT.[Id] = G.[GroupTypeId]
 INNER JOIN [DefinedValue] AS RT ON RT.[Id] = P.[RecordTypeValueId]
 WHERE GT.[Guid] = '790E3215-3B10-442B-AF69-616C0DCB998E'
 " ) ).GroupBy( p => ( int ) p["FamilyId"] ).ToList();
+            reporter = new CountProgressReporter( familyData.Count, p => Progress( p, 1, stepCount ) );
 
-            for ( int i = 0; i < familyData.Count; i++ )
+            foreach ( var familyChunk in familyData.Chunk( 500 ).Select( c => c.ToList() ) )
             {
-                var familyId = familyData[i].Key;
-                var lastNameLookup = new Dictionary<string, string>();
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                foreach ( var person in familyData[i] )
+                foreach ( var family in familyChunk )
                 {
-                    var changes = new Dictionary<string, object>();
-                    var firstName = ( string ) person["FirstName"];
-                    var nickName = ( string ) person["NickName"];
-                    var middleName = ( string ) person["MiddleName"];
-                    var lastName = ( string ) person["LastName"];
-                    var recordType = ( Guid ) person["RecordType"];
-                    int gender = ( int ) person["Gender"];
-                    var familyName = ( string ) person["FamilyName"];
+                    var familyId = family.Key;
+                    var lastNameLookup = new Dictionary<string, string>();
 
-                    if ( processedPersonIds.Contains( ( int ) person["Id"] ) )
+                    foreach ( var person in family )
                     {
-                        continue;
-                    }
-                    processedPersonIds.Add( ( int ) person["Id"] );
+                        var changes = new Dictionary<string, object>();
+                        var firstName = ( string ) person["FirstName"];
+                        var nickName = ( string ) person["NickName"];
+                        var middleName = ( string ) person["MiddleName"];
+                        var lastName = ( string ) person["LastName"];
+                        var recordType = ( Guid ) person["RecordType"];
+                        int gender = ( int ) person["Gender"];
+                        var familyName = ( string ) person["FamilyName"];
 
-                    //
-                    // Skip special names.
-                    //
-                    if ( lastName == "Administrator" || lastName == "Anonymous" || firstName == "Anonymous" )
-                    {
-                        continue;
-                    }
-
-                    if ( recordType == businessGuid )
-                    {
-                        if ( !string.IsNullOrWhiteSpace( lastName ) )
+                        if ( processedPersonIds.Contains( ( int ) person["Id"] ) )
                         {
-                            if ( !lastNameLookup.ContainsKey( lastName ) )
-                            {
-                                lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() + " " + Sweeper.DataFaker.Name.LastName() + " LLC" );
-                            }
-
-                            changes.Add( "LastName", lastNameLookup[lastName] );
+                            continue;
                         }
-                    }
-                    else
-                    {
-                        if ( !string.IsNullOrWhiteSpace( lastName ) )
-                        {
-                            if ( !lastNameLookup.ContainsKey( lastName ) )
-                            {
-                                lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() );
-                            }
-
-                            changes.Add( "LastName", lastNameLookup[lastName] );
-                        }
-
-                        if ( !string.IsNullOrWhiteSpace( firstName ) )
-                        {
-                            if ( gender == 1 )
-                            {
-                                changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Male ) );
-                            }
-                            else if ( gender == 2 )
-                            {
-                                changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Female ) );
-                            }
-                            else
-                            {
-                                changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
-                            }
-                        }
-
-                        if ( !string.IsNullOrWhiteSpace( nickName ) )
-                        {
-                            if ( nickName == firstName )
-                            {
-                                changes.Add( "NickName", changes["FirstName"] );
-                            }
-                            else
-                            {
-                                if ( gender == 1 )
-                                {
-                                    changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Male ) );
-                                }
-                                else if ( gender == 2 )
-                                {
-                                    changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Female ) );
-                                }
-                                else
-                                {
-                                    changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName() );
-                                }
-                            }
-                        }
+                        processedPersonIds.Add( ( int ) person["Id"] );
 
                         //
-                        // Leave middle name as-is.
+                        // Skip special names.
                         //
-                    }
-
-                    await Sweeper.UpdateDatabaseRecordAsync( "Person", ( int ) person["Id"], changes );
-
-                    //
-                    // Update family name.
-                    //
-                    if ( !processedFamilyIds.Contains( familyId ) && !string.IsNullOrWhiteSpace( lastName ) && familyName.StartsWith( lastName ) )
-                    {
-                        processedFamilyIds.Add( familyId );
-
-                        var familyChanges = new Dictionary<string, object>();
-
-                        if ( familyName.EndsWith( " Family" ) )
+                        if ( lastName == "Administrator" || lastName == "Anonymous" || firstName == "Anonymous" )
                         {
-                            familyChanges.Add( "Name", $"{( string ) changes["LastName"]} Family" );
+                            continue;
+                        }
+
+                        if ( recordType == businessGuid )
+                        {
+                            if ( !string.IsNullOrWhiteSpace( lastName ) )
+                            {
+                                if ( !lastNameLookup.ContainsKey( lastName ) )
+                                {
+                                    lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() + " " + Sweeper.DataFaker.Name.LastName() + " LLC" );
+                                }
+
+                                changes.Add( "LastName", lastNameLookup[lastName] );
+                            }
                         }
                         else
                         {
-                            familyChanges.Add( "Name", changes["LastName"] );
+                            if ( !string.IsNullOrWhiteSpace( lastName ) )
+                            {
+                                if ( !lastNameLookup.ContainsKey( lastName ) )
+                                {
+                                    lastNameLookup.Add( lastName, Sweeper.DataFaker.Name.LastName() );
+                                }
+
+                                changes.Add( "LastName", lastNameLookup[lastName] );
+                            }
+
+                            if ( !string.IsNullOrWhiteSpace( firstName ) )
+                            {
+                                if ( gender == 1 )
+                                {
+                                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Male ) );
+                                }
+                                else if ( gender == 2 )
+                                {
+                                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Female ) );
+                                }
+                                else
+                                {
+                                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                                }
+                            }
+
+                            if ( !string.IsNullOrWhiteSpace( nickName ) )
+                            {
+                                if ( nickName == firstName )
+                                {
+                                    changes.Add( "NickName", changes["FirstName"] );
+                                }
+                                else
+                                {
+                                    if ( gender == 1 )
+                                    {
+                                        changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Male ) );
+                                    }
+                                    else if ( gender == 2 )
+                                    {
+                                        changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName( Bogus.DataSets.Name.Gender.Female ) );
+                                    }
+                                    else
+                                    {
+                                        changes.Add( "NickName", Sweeper.DataFaker.Name.FirstName() );
+                                    }
+                                }
+                            }
+
+                            //
+                            // Leave middle name as-is.
+                            //
                         }
 
-                        await Sweeper.UpdateDatabaseRecordAsync( "Group", familyId, familyChanges );
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( ( int ) person["Id"], changes ) );
+
+                        //
+                        // Update family name.
+                        //
+                        if ( !processedFamilyIds.Contains( familyId ) && !string.IsNullOrWhiteSpace( lastName ) && familyName.StartsWith( lastName ) )
+                        {
+                            processedFamilyIds.Add( familyId );
+
+                            var familyChanges = new Dictionary<string, object>();
+
+                            if ( familyName.EndsWith( " Family" ) )
+                            {
+                                familyChanges.Add( "Name", $"{( string ) changes["LastName"]} Family" );
+                            }
+                            else
+                            {
+                                familyChanges.Add( "Name", changes["LastName"] );
+                            }
+
+                            await Sweeper.UpdateDatabaseRecordAsync( "Group", familyId, familyChanges );
+                        }
                     }
                 }
 
-                Progress( i / ( double ) familyData.Count, 1, stepCount );
+                await Sweeper.UpdateDatabaseRecordsAsync( "Person", bulkChanges );
+
+                reporter.Add( familyChunk.Count );
             }
 
             //
@@ -170,32 +180,40 @@ BR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [BenevolenceRequest] AS BR
 LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = BR.[RequestedByPersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
+            reporter = new CountProgressReporter( queryData.Count, p => Progress( p, 2, stepCount ) );
 
-            for ( int i = 0; i < queryData.Count; i++ )
+            foreach ( var chunk in queryData.Chunk( 2_500 ).Select( c => c.ToList() ) )
             {
-                var changes = new Dictionary<string, object>();
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                if ( queryData[i]["PersonFirstName"] != null )
+                foreach ( var item in chunk )
                 {
-                    changes.Add( "FirstName", queryData[i]["PersonFirstName"] );
-                }
-                else
-                {
-                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    var changes = new Dictionary<string, object>();
+
+                    if ( item["PersonFirstName"] != null )
+                    {
+                        changes.Add( "FirstName", item["PersonFirstName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    }
+
+                    if ( item["PersonLastName"] != null )
+                    {
+                        changes.Add( "LastName", item["PersonLastName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
+                    }
+
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( ( int ) item["Id"], changes ) );
                 }
 
-                if ( queryData[i]["PersonLastName"] != null )
-                {
-                    changes.Add( "LastName", queryData[i]["PersonLastName"] );
-                }
-                else
-                {
-                    changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
-                }
+                await Sweeper.UpdateDatabaseRecordsAsync( "BenevolenceRequest", bulkChanges );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "BenevolenceRequest", ( int ) queryData[i]["Id"], changes );
-
-                Progress( i / ( double ) queryData.Count, 2, stepCount );
+                reporter.Add( chunk.Count );
             }
 
             //
@@ -206,32 +224,40 @@ PR.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [PrayerRequest] AS PR
 LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = PR.[RequestedByPersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
+            reporter = new CountProgressReporter( queryData.Count, p => Progress( p, 3, stepCount ) );
 
-            for ( int i = 0; i < queryData.Count; i++ )
+            foreach ( var chunk in queryData.Chunk( 2_500 ).Select( c => c.ToList() ) )
             {
-                var changes = new Dictionary<string, object>();
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                if ( queryData[i]["PersonFirstName"] != null )
+                foreach ( var item in chunk )
                 {
-                    changes.Add( "FirstName", queryData[i]["PersonFirstName"] );
-                }
-                else
-                {
-                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    var changes = new Dictionary<string, object>();
+
+                    if ( item["PersonFirstName"] != null )
+                    {
+                        changes.Add( "FirstName", item["PersonFirstName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    }
+
+                    if ( item["PersonLastName"] != null )
+                    {
+                        changes.Add( "LastName", item["PersonLastName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
+                    }
+
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( ( int ) item["Id"], changes ) );
                 }
 
-                if ( queryData[i]["PersonLastName"] != null )
-                {
-                    changes.Add( "LastName", queryData[i]["PersonLastName"] );
-                }
-                else
-                {
-                    changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
-                }
+                await Sweeper.UpdateDatabaseRecordsAsync( "PrayerRequest", bulkChanges );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
-
-                Progress( i / ( double ) queryData.Count, 3, stepCount );
+                reporter.Add( chunk.Count );
             }
 
             //
@@ -242,32 +268,40 @@ R.[Id], P.[FirstName] AS [PersonFirstName], P.[LastName] AS [PersonLastName]
 FROM [Registration] AS R
 LEFT OUTER JOIN [PersonAlias] AS PA ON PA.[Id] = R.[PersonAliasId]
 LEFT JOIN [Person] AS P ON P.[Id] = PA.[PersonId]" );
+            reporter = new CountProgressReporter( queryData.Count, p => Progress( p, 4, stepCount ) );
 
-            for ( int i = 0; i < queryData.Count; i++ )
+            foreach ( var chunk in queryData.Chunk( 2_500 ).Select( c => c.ToList() ) )
             {
-                var changes = new Dictionary<string, object>();
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                if ( queryData[i]["PersonFirstName"] != null )
+                foreach ( var item in chunk )
                 {
-                    changes.Add( "FirstName", queryData[i]["PersonFirstName"] );
-                }
-                else
-                {
-                    changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    var changes = new Dictionary<string, object>();
+
+                    if ( item["PersonFirstName"] != null )
+                    {
+                        changes.Add( "FirstName", item["PersonFirstName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "FirstName", Sweeper.DataFaker.Name.FirstName() );
+                    }
+
+                    if ( item["PersonLastName"] != null )
+                    {
+                        changes.Add( "LastName", item["PersonLastName"] );
+                    }
+                    else
+                    {
+                        changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
+                    }
+
+                    bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( ( int ) item["Id"], changes ) );
                 }
 
-                if ( queryData[i]["PersonLastName"] != null )
-                {
-                    changes.Add( "LastName", queryData[i]["PersonLastName"] );
-                }
-                else
-                {
-                    changes.Add( "LastName", Sweeper.DataFaker.Name.LastName() );
-                }
+                await Sweeper.UpdateDatabaseRecordsAsync( "Registration", bulkChanges );
 
-                await Sweeper.UpdateDatabaseRecordAsync( "PrayerRequest", ( int ) queryData[i]["Id"], changes );
-
-                Progress( i / ( double ) queryData.Count, 4, stepCount );
+                reporter.Add( chunk.Count );
             }
 
             //
@@ -278,27 +312,35 @@ PPN.[Id], PA.[PersonId], PPN.[LastName]
 FROM PersonPreviousName AS PPN
 INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
 " ) ).GroupBy( p => p.Item2 ).ToList();
+            reporter = new CountProgressReporter( previousNames.Count, p => Progress( p, 5, stepCount ) );
 
-            for ( int i = 0; i < previousNames.Count; i++ )
+            foreach ( var chunk in previousNames.Chunk( 2_500 ).Select( c => c.ToList() ) )
             {
-                var previousNameLookup = new Dictionary<string, string>();
-                var personId = previousNames[i].Key;
+                var bulkChanges = new List<Tuple<int, Dictionary<string, object>>>();
 
-                foreach ( var previousName in previousNames[i] )
+                foreach ( var item in chunk )
                 {
-                    var changes = new Dictionary<string, object>();
+                    var previousNameLookup = new Dictionary<string, string>();
+                    var personId = item.Key;
 
-                    if ( !previousNameLookup.ContainsKey( previousName.Item3 ) )
+                    foreach ( var previousName in item )
                     {
-                        previousNameLookup.Add( previousName.Item3, Sweeper.DataFaker.Name.LastName() );
+                        var changes = new Dictionary<string, object>();
+
+                        if ( !previousNameLookup.ContainsKey( previousName.Item3 ) )
+                        {
+                            previousNameLookup.Add( previousName.Item3, Sweeper.DataFaker.Name.LastName() );
+                        }
+
+                        changes.Add( "LastName", previousNameLookup[previousName.Item3] );
+
+                        bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( previousName.Item1, changes ) );
                     }
-
-                    changes.Add( "LastName", previousNameLookup[previousName.Item3] );
-
-                    await Sweeper.UpdateDatabaseRecordAsync( "PersonPreviousName", previousName.Item1, changes );
                 }
 
-                Progress( i / ( double ) previousNames.Count, 5, stepCount );
+                await Sweeper.UpdateDatabaseRecordsAsync( "PersonPreviousName", bulkChanges );
+
+                reporter.Add( chunk.Count );
             }
 
             //
