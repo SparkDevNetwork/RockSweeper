@@ -388,8 +388,6 @@ namespace RockSweeper.Dialogs
         /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
         private void Test_Click( object sender, RoutedEventArgs e )
         {
-            bool success = true;
-
             try
             {
                 Cursor = Cursors.Wait;
@@ -399,17 +397,17 @@ namespace RockSweeper.Dialogs
                     connection.Open();
                     connection.Close();
                 }
+
+                MessageBox.Show( this, "Connection succeeded" );
             }
-            catch
+            catch ( Exception ex )
             {
-                success = false;
+                MessageBox.Show( this, ex.Message, "Connection failed" );
             }
             finally
             {
                 Cursor = null;
             }
-
-            MessageBox.Show( this, success ? "Connection succeeded" : "Connection failed" );
         }
 
         /// <summary>
