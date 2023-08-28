@@ -37,6 +37,7 @@ namespace RockSweeper.Dialogs
 
         private async Task ExecuteOnTask()
         {
+            var sw = Stopwatch.StartNew();
             var sweeper = new SweeperController( _configuration.ConnectionString );
 
             sweeper.ProgressChanged += Sweeper_ProgressChanged;
@@ -116,11 +117,13 @@ namespace RockSweeper.Dialogs
             }
 
             timeUpdateTimer.Dispose();
+            sw.Stop();
 
             Dispatcher.Invoke( () =>
             {
                 _viewModel.CanCancel = false;
-                MessageBox.Show( this, $"Finished processing database.\nExecuted {sweeper.SqlQueryCount:N0} queries.", "Completed" );
+                var duration = sw.Elapsed.ToString( "hh\\:mm\\:ss" );
+                MessageBox.Show( this, $"Finished processing database.\nExecuted {sweeper.SqlQueryCount:N0} queries.\nElapsed Time: {duration}", "Completed" );
             } );
 
             sweeper.Dispose();
