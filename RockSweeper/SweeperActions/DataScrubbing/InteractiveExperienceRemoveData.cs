@@ -58,6 +58,17 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
         private async Task ProcessInteractiveExperienceOccurrencesAsync()
         {
+            // Check if this Rock version supports Interactive Experience Occurrences.
+            try
+            {
+                await Sweeper.SqlScalarAsync<int>( "SELECT COUNT(*) FROM [InteractiveExperienceOccurrence]" );
+            }
+            catch
+            {
+                Progress( 1, 2, _stepCount );
+                return;
+            }
+
             await Sweeper.SqlCommandAsync( "DELETE FROM [InteractiveExperienceOccurrence]" );
             Progress( 1, 2, _stepCount );
         }
