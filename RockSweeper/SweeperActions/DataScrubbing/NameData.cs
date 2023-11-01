@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -346,7 +347,7 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
             //
             // Stage 6: Update other tables
             //
-            var fromNameLookup = new Dictionary<string, string>();
+            var fromNameLookup = new ConcurrentDictionary<string, string>();
             string scrubFromName( string oldValue )
             {
                 if ( oldValue.StartsWith( "{" ) )
@@ -354,13 +355,9 @@ INNER JOIN [PersonAlias] AS PA ON PA.[Id] = PPN.[PersonAliasId]
                     return oldValue;
                 }
 
-                if ( !fromNameLookup.ContainsKey( oldValue ) )
-                {
-                    fromNameLookup.Add( oldValue, Sweeper.DataFaker.Name.FullName() );
-                }
-
-                return fromNameLookup[oldValue];
+                return fromNameLookup.GetOrAdd( oldValue, v => Sweeper.DataFaker.Name.FullName() );
             }
+
             int tableStep = 0;
             foreach ( var tc in Sweeper.ScrubNameTables )
             {
