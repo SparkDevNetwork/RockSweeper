@@ -34,7 +34,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
             // Communications are usually pretty large in bytes, so use a
             // smaller chunk size than normal.
-            await AsyncProducer.FromItems( ids.Chunk( 500 ).Select( c => c.ToList() ) )
+            await AsyncProducer.FromItems( ids.Chunk( 50 ).Select( c => c.ToList() ) )
                 .Pipe( async items =>
                 {
                     var result = await ScrubCommunicationsAsync( items );
