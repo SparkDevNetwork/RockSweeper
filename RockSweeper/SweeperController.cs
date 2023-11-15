@@ -1488,8 +1488,12 @@ namespace RockSweeper
 
             if ( entityTypeId.HasValue )
             {
-                await SqlCommandAsync( $@"UPDATE AV
-SET AV.[Value] = 'False'
+                await SqlCommandAsync( $@"UPDATE AV SET
+    AV.[Value] = 'False'
+    , AV.[PersistedTextValue] = 'False'
+    , AV.[PersistedHtmlValue] = 'False'
+    , AV.[PersistedCondensedTextValue] = 'False'
+    , AV.[PersistedCondensedHtmlValue] = 'False'
 FROM [AttributeValue] AS AV
 INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
 WHERE AV.EntityId = 0
@@ -1593,11 +1597,22 @@ WHERE AV.EntityId = 0
 
             if ( attributeValueId.HasValue )
             {
-                await SqlCommandAsync( $"UPDATE [AttributeValue] SET [Value] = @Value WHERE [Id] = {attributeValueId.Value}", parameters );
+                await SqlCommandAsync( $@"
+UPDATE [AttributeValue] SET
+    [Value] = @Value
+    , [PersistedTextValue] = @Value
+    , [PersistedHtmlValue] = @Value
+    , [PersistedCondensedTextValue] = @Value
+    , [PersistedCondensedHtmlValue] = @Value
+WHERE [Id] = {attributeValueId.Value}", parameters );
             }
             else
             {
-                await SqlCommandAsync( $"INSERT INTO [AttributeValue] ([Issystem], [AttributeId], [Value], [Guid]) VALUES (0, {attributeId.Value}, @Value, NEWID())", parameters );
+                await SqlCommandAsync( $@"
+INSERT INTO [AttributeValue]
+    ([IsSystem], [AttributeId], [Value], [PersistedTextValue], [PersistedHtmlValue], [PersistedCondensedTextValue], [PersistedCondensedHtmlValue], [Guid])
+    VALUES
+    (0, {attributeId.Value}, @Value, @Value, @Value, @Value, @Value, NEWID())", parameters );
             }
         }
 
@@ -1611,9 +1626,22 @@ WHERE AV.EntityId = 0
         {
             return SqlCommandAsync( $@"DECLARE @AttributeId int = (SELECT A.[Id] FROM [Attribute] AS A INNER JOIN [EntityType] AS ET ON ET.[Id] = A.[EntityTypeId] WHERE ET.[Name] = '{entityType}' AND A.[Key] = '{attributeKey}')
 IF EXISTS (SELECT * FROM [AttributeValue] WHERE [AttributeId] = @AttributeId)
-    UPDATE [AttributeValue] SET [Value] = '{value}' WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
+BEGIN
+    UPDATE [AttributeValue] SET
+        [Value] = '{value}'
+        , [PersistedTextValue] = '{value}'
+        , [PersistedHtmlValue] = '{value}'
+        , [PersistedCondensedTextValue] = '{value}'
+        , [PersistedCondensedHtmlValue] = '{value}'
+    WHERE [AttributeId] = @AttributeId AND [EntityId] = 0
+END
 ELSE
-    INSERT INTO [AttributeValue] ([IsSystem], [AttributeId], [EntityId], [Value], [Guid]) VALUES (0, @AttributeId, 0, '{value}', NEWID())" );
+BEGIN
+    INSERT INTO [AttributeValue]
+        ([IsSystem], [AttributeId], [EntityId], [Value], [PersistedTextValue], [PersistedHtmlValue], [PersistedCondensedTextValue], [PersistedCondensedHtmlValue], [Guid])
+        VALUES
+        (0, @AttributeId, 0, '{value}', '{value}', '{value}', '{value}', '{value}', NEWID())
+END" );
         }
 
         /// <summary>

@@ -29,7 +29,14 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             //
             // Step 2: Clear any links to PDFs from Protect My Ministry
             //
-            await Sweeper.SqlCommandAsync( "UPDATE [AttributeValue] SET [Value] = 'HIDDEN' WHERE [Value] LIKE '%://services.priorityresearch.com%'" );
+            await Sweeper.SqlCommandAsync( @"
+UPDATE [AttributeValue] SET
+    [Value] = 'HIDDEN'
+    , [PersistedTextValue] = 'HIDDEN'
+    , [PersistedHtmlValue] = 'HIDDEN'
+    , [PersistedCondensedTextValue] = 'HIDDEN'
+    , [PersistedCondensedHtmlValue] = 'HIDDEN'
+WHERE [Value] LIKE '%://services.priorityresearch.com%'" );
             Progress( 1, 2, stepCount );
 
             //
@@ -38,7 +45,16 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             int? backgroundCheckFieldTypeId = await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.BackgroundCheckFieldType" );
             if ( backgroundCheckFieldTypeId.HasValue )
             {
-                await Sweeper.SqlCommandAsync( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
+                await Sweeper.SqlCommandAsync( $@"
+UPDATE AV SET
+    AV.[Value] = ''
+    , AV.[PersistedTextValue] = ''
+    , AV.[PersistedHtmlValue] = ''
+    , AV.[PersistedCondensedTextValue] = ''
+    , AV.[PersistedCondensedHtmlValue] = ''
+FROM [AttributeValue] AS AV
+INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
+WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
                 Progress( 1, 3, stepCount );
             }
 

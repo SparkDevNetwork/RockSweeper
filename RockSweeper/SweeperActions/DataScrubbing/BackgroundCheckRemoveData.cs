@@ -29,7 +29,16 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             int? backgroundCheckFieldTypeId = await Sweeper.GetFieldTypeIdAsync( "Rock.Field.Types.BackgroundCheckFieldType" );
             if ( backgroundCheckFieldTypeId.HasValue )
             {
-                await Sweeper.SqlCommandAsync( $"UPDATE AV SET AV.[Value] = '' FROM [AttributeValue] AS AV INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId] WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
+                await Sweeper.SqlCommandAsync( $@"
+UPDATE AV SET
+    AV.[Value] = ''
+    , AV.[PersistedTextValue] = ''
+    , AV.[PersistedHtmlValue] = ''
+    , AV.[PersistedCondensedTextValue] = ''
+    , AV.[PersistedCondensedHtmlValue] = ''
+FROM [AttributeValue] AS AV
+INNER JOIN [Attribute] AS A ON A.[Id] = AV.[AttributeId]
+WHERE A.[FieldTypeId] = {backgroundCheckFieldTypeId.Value}" );
             }
             Progress( 1, step++, stepCount );
 

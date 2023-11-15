@@ -74,9 +74,13 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     if ( newValue != av.Item2 )
                     {
                         var changes = new Dictionary<string, object>
-                            {
-                            { "Value", newValue }
-                            };
+                        {
+                            { "Value", newValue },
+                            { "PersistedTextValue", newValue },
+                            { "PersistedHtmlValue", newValue },
+                            { "PersistedCondensedTextValue", newValue },
+                            { "PersistedCondensedHtmlValue", newValue }
+                        };
 
                         bulkChanges.Add( new Tuple<int, Dictionary<string, object>>( av.Item1, changes ) );
                     }
