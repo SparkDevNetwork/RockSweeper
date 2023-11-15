@@ -141,6 +141,12 @@ namespace RockSweeper
         public Bogus.Faker DataFaker { get; private set; }
 
         /// <summary>
+        /// Gets the rock version that was found in the database.
+        /// </summary>
+        /// <value>The rock version, such as 1.17.0.4.</value>
+        public Version RockVersion { get; private set; }
+
+        /// <summary>
         /// Gets the geo lookup cache.
         /// </summary>
         /// <value>
@@ -445,6 +451,13 @@ namespace RockSweeper
         /// </summary>
         public async Task ExecuteAsync( IList<SweeperOption> options )
         {
+            await GetRockVersionAsync();
+
+            if ( RockVersion < new Version( 1, 14, 0 ) )
+            {
+                throw new Exception( $"Database version {RockVersion} is not supported, 1.14.0 is the minimum supported version." );
+            }
+
             SleepHelper.PreventSleep();
 
             try
@@ -503,6 +516,22 @@ namespace RockSweeper
             }
 
             DataFaker = new Bogus.Faker( "en_BORK" );
+        }
+
+        /// <summary>
+        /// Get rock version from the database.
+        /// </summary>
+        private async Task GetRockVersionAsync()
+        {
+            var globalDefaultAssemblyName = await SqlScalarAsync<string>( "SELECT [AssemblyName] FROM [EntityType] WHERE [Name] = 'Rock.Security.GlobalDefault'" );
+            var match = Regex.Match( globalDefaultAssemblyName, "Version=([\\d.]+)," );
+
+            if ( !match.Success )
+            {
+                throw new Exception( "Unable to determine Rock version from database." );
+            }
+
+            RockVersion = new Version( match.Groups[1].Value );
         }
 
         /// <summary>
