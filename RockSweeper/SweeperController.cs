@@ -1394,6 +1394,10 @@ namespace RockSweeper
                         {
                             columns.Add( $"[{c.ColumnName}] [decimal](18, 2) NULL" );
                         }
+                        else if ( c.DataType == typeof( bool ) )
+                        {
+                            columns.Add( $"[{c.ColumnName}] [bit] NULL" );
+                        }
                         else
                         {
                             throw new Exception( $"Unknown column type '{c.DataType.FullName}' in bulk update." );

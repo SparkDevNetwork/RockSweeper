@@ -150,6 +150,7 @@
     <Compile Include="SweeperActions\DataScrubbing\LocationAddressGenerateData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\LoginData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\NameData.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\PersistedAttributeValueData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\PhoneNumberData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\HistoryPlaceholderData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\InteractiveExperienceRemoveData.cs" />
