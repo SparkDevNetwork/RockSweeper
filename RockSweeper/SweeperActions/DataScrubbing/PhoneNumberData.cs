@@ -44,7 +44,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
 
                     if ( phoneNumber.Length == 10 )
                     {
-                        numberFormatted = $"({phoneNumber.Substring( 0, 3 )}) {phoneNumber.Substring( 3, 4 )}-{phoneNumber.Substring( 7 )}";
+                        numberFormatted = $"({phoneNumber.Substring( 0, 3 )}) {phoneNumber.Substring( 3, 3 )}-{phoneNumber.Substring( 6 )}";
                     }
                     else if ( phoneNumber.Length == 7 )
                     {

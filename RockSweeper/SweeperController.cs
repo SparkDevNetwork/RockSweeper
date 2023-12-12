@@ -707,14 +707,11 @@ namespace RockSweeper
                     //
                     // Generate exchange code.
                     //
-                    var exchangeCode = new[]
-                    {
-                        Convert.ToChar( '0' + DataFaker.Random.Number( 2, 9 ) ),
-                        Convert.ToChar( '0' + DataFaker.Random.Number( 0, 9 ) ),
-                        Convert.ToChar( '0' + DataFaker.Random.Number( 0, 9 ) )
-                    };
-                    number += new string( exchangeCode );
+                    number += "555";
 
+                    //
+                    // Generate the line number.
+                    //
                     number += DataFaker.Random.Replace( "####" );
 
                     return number;
