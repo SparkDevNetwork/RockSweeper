@@ -18,8 +18,8 @@ namespace RockSweeper.SweeperActions.General
     {
         public override async Task ExecuteAsync()
         {
-            await Sweeper.SetGlobalAttributeValue( "InternalApplicationRoot", "http://rock.example.org" );
-            await Sweeper.SetGlobalAttributeValue( "PublicApplicationRoot", "http://www.example.org" );
+            await Sweeper.SetGlobalAttributeValue( "InternalApplicationRoot", "http://rock.example.org/" );
+            await Sweeper.SetGlobalAttributeValue( "PublicApplicationRoot", "http://www.example.org/" );
         }
     }
 }
