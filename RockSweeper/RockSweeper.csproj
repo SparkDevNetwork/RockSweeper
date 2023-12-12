@@ -145,6 +145,7 @@
     </Compile>
     <Compile Include="SweeperActions\DataScrubbing\AnalyticsSourceRemoveData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\ApiKeyData.cs" />
+    <Compile Include="SweeperActions\DataScrubbing\GroupDescriptionData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\OrganizationAndCampusData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\EmailAddressData.cs" />
     <Compile Include="SweeperActions\DataScrubbing\LocationAddressGenerateData.cs" />
