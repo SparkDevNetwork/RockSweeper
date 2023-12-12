@@ -178,6 +178,8 @@
     <Compile Include="SweeperActions\DataScrubbing\PersonTokenRemoveData.cs" />
     <Compile Include="SweeperActions\General\DisableRockJobs.cs" />
     <Compile Include="SweeperActions\General\DisableSslForSitesAndPages.cs" />
+    <Compile Include="SweeperActions\ServiceProviders\ObservabilityDisable.cs" />
+    <Compile Include="SweeperActions\ServiceProviders\ObservabilityReset.cs" />
     <Compile Include="SweeperActions\SweeperAction.cs" />
     <Compile Include="SweeperActions\Storage\ConvertBinaryFilesToDatabasePlaceholders.cs" />
     <Compile Include="SweeperActions\Storage\MoveBinaryFilesIntoDatabase.cs" />
