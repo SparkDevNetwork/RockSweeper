@@ -62,6 +62,7 @@ namespace RockSweeper.SweeperActions.Storage
                             imageStream = new MemoryStream( Sweeper.CreatePlaceholderImage( "test.png", file.Width ?? 256, file.Height ?? 256 ) );
                         }
 
+                        imageStream.Position = 0;
                         contentStream = imageStream;
                     }
                     else
