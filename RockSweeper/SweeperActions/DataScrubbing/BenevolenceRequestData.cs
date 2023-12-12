@@ -19,6 +19,12 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     {
         public override async Task ExecuteAsync()
         {
+            await CleanRequestDataAsync( 1, 2 );
+            await CleanResultDataAsync( 2, 2 );
+        }
+
+        private async Task CleanRequestDataAsync(int step, int stepCount)
+        {
             var queryData = await Sweeper.SqlQueryAsync<int, string, string, string>( "SELECT [Id],[GovernmentId],[RequestText],[ResultSummary] FROM [BenevolenceRequest]" );
             var wordRegex = new Regex( "([a-zA-Z]+)" );
 
@@ -56,7 +62,29 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     await Sweeper.UpdateDatabaseRecordAsync( "BenevolenceRequest", queryData[i].Item1, changes );
                 }
 
-                Progress( i / ( double ) queryData.Count );
+                Progress( i / ( double ) queryData.Count, step, stepCount );
+            }
+        }
+
+        private async Task CleanResultDataAsync( int step, int stepCount )
+        {
+            var queryData = await Sweeper.SqlQueryAsync<int, string>( "SELECT [Id],[ResultSummary] FROM [BenevolenceResult]" );
+
+            for ( int i = 0; i < queryData.Count; i++ )
+            {
+                var changes = new Dictionary<string, object>();
+
+                if ( !string.IsNullOrWhiteSpace( queryData[i].Item2 ) )
+                {
+                    changes.Add( "ResultSummary", Sweeper.DataFaker.Lorem.ReplaceWords( queryData[i].Item2 ) );
+                }
+
+                if ( changes.Any() )
+                {
+                    await Sweeper.UpdateDatabaseRecordAsync( "BenevolenceResult", queryData[i].Item1, changes );
+                }
+
+                Progress( i / ( double ) queryData.Count, step, stepCount );
             }
         }
     }
