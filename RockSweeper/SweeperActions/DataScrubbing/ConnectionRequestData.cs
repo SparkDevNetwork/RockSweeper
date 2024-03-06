@@ -64,7 +64,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             {
                 var changes = new Dictionary<string, object>();
 
-                changes["Name"] = Sweeper.DataFaker.Lorem.ReplaceWords( opportunity.Name );
+                changes["Name"] = Sweeper.DataFaker.Lorem.ReplaceWords( opportunity.Name ).Left( 50 );
 
                 if ( !string.IsNullOrWhiteSpace( opportunity.PublicName ) )
                 {
@@ -74,7 +74,7 @@ namespace RockSweeper.SweeperActions.DataScrubbing
                     }
                     else
                     {
-                        changes["PublicName"] = Sweeper.DataFaker.Lorem.ReplaceWords( opportunity.PublicName );
+                        changes["PublicName"] = Sweeper.DataFaker.Lorem.ReplaceWords( opportunity.PublicName ).Left( 50 );
                     }
                 }
 
