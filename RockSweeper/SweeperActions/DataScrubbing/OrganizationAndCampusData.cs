@@ -18,7 +18,8 @@ namespace RockSweeper.SweeperActions.DataScrubbing
     {
         public override async Task ExecuteAsync()
         {
-            string organizationCity = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
+            var organizationCity = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
+            var usedCampusNames = new List<string>();
 
             await Sweeper.SetGlobalAttributeValue( "OrganizationName", $"{organizationCity} Community Church" );
             await Sweeper.SetGlobalAttributeValue( "OrganizationAbbreviation", $"{organizationCity} Community Church" );
@@ -28,6 +29,15 @@ namespace RockSweeper.SweeperActions.DataScrubbing
             foreach ( var campus in campuses )
             {
                 var campusCityName = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
+                int nameAttempt = 0;
+
+                while ( usedCampusNames.Contains( campusCityName ) && nameAttempt < 100 )
+                {
+                    campusCityName = Sweeper.DataFaker.PickRandom( Sweeper.LocationCityPostalCodes.Keys.ToList() );
+                    nameAttempt++;
+                }
+
+                usedCampusNames.Add( campusCityName );
 
                 var changes = new Dictionary<string, object>
                 {
